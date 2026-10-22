@@ -37,5 +37,6 @@ export declare class CursorFactory implements AgentFactory {
     private publish;
     dispose(): Promise<void>;
 }
+export declare function createRuntimeSdk(): Promise<RuntimeSdk>;
 export declare function applyRuntime(ctx: Context, config?: RuntimeConfig, account?: AccountCatalogSource): Promise<void>;
 //# sourceMappingURL=index.d.ts.map

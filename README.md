@@ -1,54 +1,49 @@
 # dsh-cursor-agent
 
-为 DeepSeek Harness 接入 Cursor 官方 SDK 的账号管理、动态模型目录与原生 Agent。
+为 DeepSeek Harness 接入 Cursor 官方 SDK 的账号管理与独立原生 Agent 任务。
 
-`0.1.1` 提供专用 Cursor 模式：Cursor 执行 Agent 循环和实际工具，Harness 展示会话、流式文本与工具记录。工具事件只用于展示，不会在 Harness 再执行一次。
+`0.2.0` 将 Cursor 任务放入独立运行域，通过侧栏“Cursor 任务”使用；官方聊天、模型提供方与默认 Agent 循环继续由 Harness 管理。Cursor 执行原生 Agent 循环及实际工具，Harness 展示文本与工具记录，不重复执行工具。
 
 ## 能力与验证范围
 
-- 模型设置页提供 Cursor 登录链接、复制、取消、状态刷新和退出；凭据由官方 SDK 管理。
-- “连接成功”表示远端账号信息与模型目录验证成功。本机已保存凭据、远端连接成功和真实 Agent 对话是不同状态。
-- 注册独立 `cursor` 模型提供方，动态读取模型和变体，并把所选参数传给原生 Agent。
-- 文本多轮、增量展示、取消与会话恢复已有实现和离线验证。恢复必须具有匹配的 Cursor Agent、工作区、权限配置和 checkpoint；已有非 Cursor 会话不能伪恢复。
-- 默认工具策略为只读并启用 SDK 沙箱；可显式配置工作区写入或 Shell。SDK 的 Windows 沙箱实际执行仍需真实环境验收。
+- “设置 → Cursor”提供登录链接、复制、取消、状态刷新和退出；模型设置页也保留账号入口。
+- “连接成功”要求远端账号信息与模型目录验证成功。本机已保存凭据、远端连接和真实 Agent 对话是不同事实。
+- “Cursor 任务”支持填写工作区绝对路径、选择动态模型、创建任务、发送文本、多轮流式展示、查看工具记录、取消及恢复本机任务。
+- 创建任务不发送提示词；点击“发送”后才开始模型执行，可能产生 Cursor 用量费用。关闭页面不会取消活动任务。
+- 默认只读并启用 SDK 沙箱；可通过插件配置显式选择工作区写入或 Shell。Windows 沙箱实际执行仍需真实环境验收。
 
-本轮使用真实 Harness 服务与离线 SDK 替身验证集成。**尚未执行真实浏览器授权、账号模型请求、计费对话或 Desktop 实机安装验收。** 详细证据及尚未验证项目见 [验证记录](docs/verification.md)。
+`0.2.0` 已通过完整构建、87 项离线测试、真实菜单插槽挂载及从 `0.1.1` 原地升级后的 Host 解析器激活验证，详见 [验证记录](docs/verification.md)。**尚未执行真实浏览器授权、真实账号模型请求、计费对话或 Desktop 实机安装验收。**
 
-## 安装到 Harness
+## 安装与升级
 
-兼容目标：Node.js 24、Harness `0.2.1-rc.2`、Cordis `4.0.5`、Cursor SDK `1.0.40`。无需安装 Cursor 桌面应用或手动安装 SDK。
+兼容目标：Node.js 24、Harness `0.2.1-rc.2`、Cordis `4.0.5`、Cursor SDK `1.0.40`。插件随包安装 SDK，无需单独安装 Cursor 桌面应用或全局 SDK；SDK 托管运行组件仍受平台与登录条件约束，真实环境兼容性尚待验收。
 
-本版本会将对应 profile 切换为专用 Cursor 模式，停用默认 Agent loop、DeepSeek/Pi 模型提供方及与原生循环冲突的自动标题、计划与压缩任务，保留账号配置数据和模型设置页。建议使用专门的验证 profile。恢复原模式应卸载插件并重启 Harness；仅关闭宿主插件开关不会移除 bundle patch。
-
-Desktop 的“添加插件”窗口可填写：
-
-```text
-github:wuyouchao/dsh-cursor-agent#v0.1.1
-```
-
-推荐使用已发布的版本标签 `v0.1.1`，也可使用对应的固定提交 SHA。以后升级时改为新版本标签或新固定 SHA。命令行管理 Desktop 插件前先完全退出 Desktop：
+完全退出 Desktop 后，使用以下命令安装或原地升级；无需先卸载，也无需重新配置 Harness 官方账号：
 
 ```sh
-dsh plugin --profile desktop add github:wuyouchao/dsh-cursor-agent#v0.1.1
+dsh plugin --profile desktop add github:wuyouchao/dsh-cursor-agent#v0.2.0
 ```
 
-Web 用户将 `desktop` 替换为已有的 `web` profile。安装后重新启动对应实例，在模型设置页的 Cursor 卡片完成授权、刷新目录，再在新会话选择 Cursor 模型。
+该命令要求 `v0.2.0` 标签已发布。Desktop 的“添加插件”窗口可填写同一个 Git 地址。Web 用户将 `desktop` 替换为已有的 `web` profile。安装后重启对应实例。
 
-Git 安装直接使用仓库中的 `dist/` 与 `lib/` 预编译产物，不执行 `prepare` 等安装构建脚本。若失败页面仍引用旧版本或 `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`，重新添加固定的新提交；旧任务的重试可能继续使用旧代码。
+`0.1.1` 使用专用 Cursor 模式，会接管全局 Agent factory 并停用官方循环及模型提供方。`0.2.0` 的 bundle patch 仅插入本插件，不改写官方 loop、providers 或默认模型；Host 包改用精确版本 peer 依赖与开发依赖，由 Harness 共享解析，避免插件生产依赖复制宿主作用域包造成冲突。旧版任务数据能否恢复仍须满足原生 Agent、工作区、权限与 checkpoint 校验，不承诺自动迁移。
 
-升级无需先卸载：完全退出 Desktop，使用上面的同一条 `dsh plugin --profile desktop add` 命令，将 Git 地址改为新版本标签或固定 SHA，完成后重启 Desktop。第三方插件在 GUI 中暂不提供更新操作，可使用此命令原地升级。
-
-`0.1.1` 修复了 `0.1.0` 在 Desktop 启用时因未提供插件配置而出现的 `invalid config: expected object, received undefined`。配置省略时会应用只读权限与启用沙箱的默认值；遇到该错误请升级到包含此修复的固定提交并重启 Harness。
+Git 安装直接使用仓库内的 `dist/` 与 `lib/` 预编译产物，不执行安装生命周期构建。项目未发布 npm 包，`private: true` 防止误发布。
 
 ## 使用与限制
 
-先在模型设置页连接 Cursor，选择目录中的模型，再新建会话。默认模型路由 `default` 由最新 Cursor 目录解析；独立 `maxTokens`、`reasoningEffort` 参数不映射为假支持，应使用目录提供的模型变体。
+1. 打开“设置 → Cursor”，完成授权并刷新连接状态。
+2. 打开侧栏“Cursor 任务”，填写可访问的工作区绝对路径，选择模型并创建任务。
+3. 输入需求并点击“发送”，查看文本流及工具记录；运行中可取消。
+4. 重启后从任务记录选择具有有效 checkpoint 的任务，点击“恢复任务”后继续对话。
 
-目前仅支持文本输入。图片、分叉、Harness 子 Agent、steer/inject、人工审批响应和 Harness maintenance/压缩尚不支持，会明确拒绝。原生工具产生人工交互请求时运行会终止。取消会等待原生运行确认终态；超过本地收尾时限则该 Agent 停止接收新消息，避免与尚未结束的运行重叠。
+Cursor 任务不注册到宿主全局 Agent 或 LLM，不出现在官方模型选择器中。目录提供的模型及变体直接用于 Cursor 运行；独立 `maxTokens`、`reasoningEffort` 不映射为假支持。
 
-会话映射默认保存在对应 profile 目录的 `cursor-agent/` 下；独立组合无 profile 时使用 `~/.dsh/cursor-agent/<工作目录摘要>/`。映射不含账号凭据。可通过插件 `stateDirectory` 指定位置。
+目前仅支持文本输入。图片、分叉、Harness 子 Agent、steer/inject、人工审批响应和 Harness maintenance/压缩尚不支持；原生工具要求人工交互时运行会终止。取消等待原生运行确认终态；收尾超时后停止复用该 Agent，避免重叠运行。恢复失败不会创建空 Agent 冒充成功。SDK `1.0.40` 通常在首次发送后才产生 checkpoint；新建但未发送的空任务重启后无法恢复，会标记为不可用并提示新建。已有任务的 checkpoint 丢失或上次运行未结束时也拒绝恢复。取消等待五秒仍未确认停止、或持久化失败的任务会标记为不可用，不能继续或盲目重建同一任务。
 
-账号 CLI 仍可使用，Desktop 用户应先退出 Desktop，Web 用户替换 profile 名称：
+任务映射、独立 JSONL 会话与 SDK checkpoint 使用插件状态目录保存。默认位于对应 profile 的 `cursor-agent/tasks/`，按 profile 隔离；无 profile 时使用 `~/.dsh/cursor-agent/<工作目录摘要>/`，可通过 `stateDirectory` 指定位置。映射不含账号凭据。
+
+账号 CLI 仍可使用，Desktop 用户先退出 Desktop，Web 用户替换 profile 名称：
 
 ```sh
 dsh plugin --profile desktop exec dsh-cursor-agent-auth login
@@ -56,7 +51,7 @@ dsh plugin --profile desktop exec dsh-cursor-agent-auth status
 dsh plugin --profile desktop exec dsh-cursor-agent-auth logout
 ```
 
-CLI `status` 仅查询 SDK 本机保存状态，不验证远端密钥。`CURSOR_API_KEY` 优先于保存的登录；退出只清除 SDK 保存的凭据，不撤销远端 Key、不修改环境变量。插件不读取私有凭据文件结构，不把 Key 写入日志、会话或客户端响应。
+CLI `status` 仅查询 SDK 本机保存状态，不验证远端密钥。`CURSOR_API_KEY` 优先于保存的登录；退出只清除 SDK 保存凭据，不撤销远端 Key、不修改环境变量。认证只使用官方公开 SDK，插件不读取私有凭据文件结构，不把 Key 写入日志、会话或客户端响应。
 
 ## 开发和打包
 
@@ -66,15 +61,15 @@ npm run check
 npm pack
 ```
 
-`check` 包含 Typert 契约生成、严格类型、格式、离线测试与生产构建。默认测试不登录、不调用付费模型。修改源码后必须同步构建并提交 `dist/` 与生成的 `lib/`；不要添加安装生命周期构建脚本。
+`check` 包含 Typert 契约生成、严格类型、格式、生产构建与离线测试。默认测试不登录、不调用付费模型。生产依赖仅含 `@cursor/sdk` 与 `zod`；Host 依赖精确锁定并由 Harness 共享。修改源码后同步构建并提交 `dist/` 与生成的 `lib/`；不要添加 `prepare` 等安装生命周期脚本。
 
-本地包可在专用 profile 中验收：
+隔离环境的本地包验收命令：
 
 ```sh
-dsh plugin --profile web add ./dsh-cursor-agent-0.1.1.tgz
+dsh plugin --profile web add ./dsh-cursor-agent-0.2.0.tgz
 ```
 
-此命令会修改指定 profile，应由用户自行在验证环境执行。项目未发布 npm 包，`private: true` 防止误发布。
+该命令会修改指定 profile，应在用户选择的验证环境执行。
 
 ## 设计与证据
 

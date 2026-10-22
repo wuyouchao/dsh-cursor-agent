@@ -1,6 +1,6 @@
 {
   "name": "dsh-cursor-agent",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "DeepSeek Harness 的 Cursor 原生 Agent 与账号管理插件",
   "type": "module",
@@ -39,6 +39,10 @@
     "./shared/account": {
       "types": "./dist/shared/account.d.ts",
       "default": "./dist/shared/account.js"
+    },
+    "./shared/tasks": {
+      "types": "./dist/shared/tasks.d.ts",
+      "default": "./dist/shared/tasks.js"
     }
   },
   "files": [
@@ -65,7 +69,9 @@
       "platform": "web",
       "inject": [
         "@deepseek-ai/dsh-api-remotes",
-        "@deepseek-ai/dsh-client-ui-settings-models"
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
       ]
     }
   },
@@ -88,11 +94,16 @@
   },
   "dependencies": {
     "@cursor/sdk": "1.0.40",
+    "zod": "4.4.3"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.5",
     "@deepseek-ai/dsh-agent": "0.2.1-rc.2",
     "@deepseek-ai/dsh-llm": "0.2.1-rc.2",
     "@deepseek-ai/dsh-scope": "0.2.1-rc.2",
     "@deepseek-ai/dsh-session": "0.2.1-rc.2",
     "@deepseek-ai/dsh-session-persistence": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session-persistence-jsonl": "0.2.1-rc.2",
     "@deepseek-ai/dsh-session-projection": "0.2.1-rc.2",
     "@deepseek-ai/dsh-storage": "0.2.1-rc.2",
     "@deepseek-ai/dsh-storage-domain": "0.2.1-rc.2",
@@ -100,28 +111,50 @@
     "@deepseek-ai/dsh-typert-protocol": "0.2.1-rc.2",
     "@deepseek-ai/dsh-typert-registry": "0.2.1-rc.2",
     "@deepseek-ai/dsh-workspace": "0.2.1-rc.2",
-    "zod": "4.4.3"
-  },
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.5"
+    "@deepseek-ai/dsh-client-ui-layout": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-sidebar": "0.2.1-rc.2"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/cordis-plugin-group": "1.0.5",
     "@deepseek-ai/cordis-plugin-include": "1.0.10",
     "@deepseek-ai/cordis-plugin-loader": "1.0.6",
+    "@deepseek-ai/dsh-agent": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-agent-preset-registry": "0.2.1-rc.2",
     "@deepseek-ai/dsh-api-gateway": "0.2.1-rc.2",
     "@deepseek-ai/dsh-api-remotes": "0.2.1-rc.2",
     "@deepseek-ai/dsh-app-boot": "0.2.1-rc.2",
     "@deepseek-ai/dsh-client-connection": "0.2.1-rc.2",
     "@deepseek-ai/dsh-client-locale": "0.2.1-rc.2",
     "@deepseek-ai/dsh-client-store": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-layout": "0.2.1-rc.2",
     "@deepseek-ai/dsh-client-ui-primitives": "0.2.1-rc.2",
     "@deepseek-ai/dsh-client-ui-renderer": "0.2.1-rc.2",
     "@deepseek-ai/dsh-client-ui-settings": "0.2.1-rc.2",
     "@deepseek-ai/dsh-client-ui-settings-models": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-sidebar": "0.2.1-rc.2",
     "@deepseek-ai/dsh-client-ui-slots": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-fs": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-fs-local": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-persona": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-scope": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session-persistence": "0.2.1-rc.2",
     "@deepseek-ai/dsh-session-persistence-jsonl": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session-projection": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-settings": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-storage": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-storage-domain": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-subagent": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-system-prompt": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-tool-subagent": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
     "@deepseek-ai/dsh-typert-generator": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-typert-registry": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-working-directory": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-workspace": "0.2.1-rc.2",
     "@types/node": "24.19.2",
     "@types/react": "18.3.26",
     "@types/react-dom": "18.3.7",

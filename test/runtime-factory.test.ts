@@ -23,7 +23,7 @@ import {
   type Run,
   type AgentOptions,
 } from "@cursor/sdk";
-import { MessageId } from "@deepseek-ai/dsh-llm";
+import { MessageId, LlmAdapter } from "@deepseek-ai/dsh-llm";
 import { CursorFactory, type RuntimeSdk } from "../src/runtime/index.js";
 
 /** 真正的 Cordis 持久化服务定义；仅将磁盘替换为可检查的内存存储。 */
@@ -465,7 +465,54 @@ test("send挂起取消可whenIdle，迟到run被取消且同一Agent可下一轮
   }
 });
 
-test("完整入口依赖真实服务可用后注册账号、目录与唯一factory，卸载撤销", async () => {
+function keepOfficialHost(ctx: Context) {
+  class OfficialAdapter extends LlmAdapter {
+    override providerInfo(provider: string) {
+      return { id: provider, name: "已有官方模型" };
+    }
+    override async listModels() {
+      return [];
+    }
+    override async *stream() {
+      throw new Error("测试不执行模型");
+    }
+  }
+  ctx.effect(
+    () => ctx.llm.registerAdapter(["official-existing"], new OfficialAdapter()),
+    "test.official-model",
+  );
+  ctx.effect(
+    () =>
+      ctx.agents.setFactory({
+        createAgent: async () => {
+          throw new Error("测试不执行官方Agent");
+        },
+        resume: async () => {
+          throw new Error("测试不恢复官方Agent");
+        },
+      }),
+    "test.official-factory",
+  );
+  const before = ctx.llm.listProviders();
+  return () => {
+    assert.deepEqual(ctx.llm.listProviders(), before, "官方模型目录不得改变");
+    assert.throws(
+      () =>
+        ctx.agents.setFactory({
+          createAgent: async () => {
+            throw new Error("unused");
+          },
+          resume: async () => {
+            throw new Error("unused");
+          },
+        }),
+      /factory|already|registered/i,
+      "已有官方factory仍归原owner",
+    );
+  };
+}
+
+test("完整入口注册独立账号与任务，保留官方模型及factory，卸载撤销自有服务", async () => {
   const { default: LlmRuntime } = await import("@deepseek-ai/dsh-llm");
   const { default: ProjectionRegistry } =
     await import("@deepseek-ai/dsh-session-projection");
@@ -481,38 +528,17 @@ test("完整入口依赖真实服务可用后注册账号、目录与唯一facto
     await ctx.plugin(TypertRegistry);
     await ctx.plugin(LlmRuntime);
     await ctx.plugin(ProjectionRegistry);
-    const ready = deferred<void>();
-    const stop = ctx.on("llm/adapters-updated", () => {
-      if (ctx.llm.listProviders().some((provider) => provider.id === "cursor"))
-        ready.resolve();
-    });
+    const unchanged = keepOfficialHost(ctx);
     const fiber = ctx.plugin(plugin, { stateDirectory: root });
     await fiber;
-    fiber.assertActive();
+    assert.equal(fiber.state, 2);
     assert.equal(ctx.cursorAccount.getState().status, "signed-out");
-    await ready.promise;
-    stop();
-    assert.ok(
-      ctx.llm.listProviders().some((provider) => provider.id === "cursor"),
-    );
-    assert.throws(
-      () =>
-        ctx.agents.setFactory({
-          createAgent: async () => {
-            throw new Error("unused");
-          },
-          resume: async () => {
-            throw new Error("unused");
-          },
-        }),
-      /factory|already|registered/i,
-    );
+    assert.deepEqual(await ctx.cursorTasks.listTasks(), []);
+    unchanged();
     await fiber.dispose();
-    assert.equal(
-      ctx.llm.listProviders().some((provider) => provider.id === "cursor"),
-      false,
-    );
+    unchanged();
     assert.throws(() => ctx.cursorAccount.getState());
+    assert.throws(() => ctx.cursorTasks.listTasks());
   } finally {
     await ctx.fiber.dispose();
     await rm(root, { recursive: true, force: true });
@@ -736,6 +762,8 @@ for (const face of ["source", "dist"] as const) {
         await ctx.plugin(TypertRegistry);
         await ctx.plugin(LlmRuntime);
         await ctx.plugin(ProjectionRegistry);
+        ctx.reflect.provide("profileContext", { dir: root });
+        const unchanged = keepOfficialHost(ctx);
         let config: unknown;
         if (mode === "patch") {
           const { readFile } = await import("node:fs/promises");
@@ -778,15 +806,7 @@ for (const face of ["source", "dist"] as const) {
             false,
           );
           assert.throws(() => ctx.cursorAccount.getState());
-          const release = ctx.agents.setFactory({
-            createAgent: async () => {
-              throw new Error("unused");
-            },
-            resume: async () => {
-              throw new Error("unused");
-            },
-          });
-          release();
+          unchanged();
         } else {
           await fiber.await();
           assert.equal(
@@ -795,23 +815,8 @@ for (const face of ["source", "dist"] as const) {
             "必须真正ACTIVE，不能仅依赖assertActive",
           );
           assert.equal(ctx.cursorAccount.getState().status, "signed-out");
-          assert.ok(
-            ctx.llm
-              .listProviders()
-              .some((provider) => provider.id === "cursor"),
-          );
-          assert.throws(
-            () =>
-              ctx.agents.setFactory({
-                createAgent: async () => {
-                  throw new Error("unused");
-                },
-                resume: async () => {
-                  throw new Error("unused");
-                },
-              }),
-            /factory|already|registered/i,
-          );
+          assert.deepEqual(await ctx.cursorTasks.listTasks(), []);
+          unchanged();
           assert.equal(
             fiber.config.permissionMode,
             mode === "explicit" ? "shell" : "readonly",
@@ -824,6 +829,7 @@ for (const face of ["source", "dist"] as const) {
             assert.equal(fiber.config.stateDirectory, root);
         }
         await fiber.dispose();
+        unchanged();
         assert.equal(
           ctx.llm.listProviders().some((provider) => provider.id === "cursor"),
           false,

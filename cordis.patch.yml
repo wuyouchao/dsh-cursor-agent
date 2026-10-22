@@ -1,23 +1,5 @@
-# 0.1.1 是专用 Cursor 原生 Agent 模式；只停用与原生循环冲突的行为。
-- id: agent-loop
-  disabled: true
-- id: session-title-llm
-  disabled: true
-- id: plan-mode
-  disabled: true
-- id: compaction-basic
-  disabled: true
-- id: agent-default-model
-  config:
-    provider: cursor
-    model: default
+# Cursor 账号与任务独立运行，不修改宿主官方模型、Agent 或预设。
 - insert:
     - id: dsh-cursor-agent
       name: dsh-cursor-agent
       config: {}
-- id: llm-deepseek
-  disabled: true
-- id: llm-deepseek-account
-  disabled: true
-- id: llm-pi-ai
-  disabled: true

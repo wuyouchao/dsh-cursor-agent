@@ -1,4 +1,6 @@
-# 0.1.0 验证步骤与记录
+# 验证记录：0.1.x 历史与 0.2.0 独立任务
+
+当前 0.2.0 使用独立 Cursor 账号与任务运行域，bundle patch 仅插入本插件，不再停用官方 Agent、模型或预设。下方 A1–A10 及 0.1.1 节是历史发布验收，专用 profile 与全局 factory 的描述不代表当前设计；当前新增证据见末尾 Host 共享模块与预设作用域回归。
 
 本记录区分离线自动验证和真实环境验收。未填写证据的项目一律视为待完成；编译通过不代表真实账号、Desktop 或计费对话成功。
 
@@ -115,3 +117,27 @@ runProfilePnpm(context, ["add", "github:wuyouchao/dsh-cursor-agent#v0.1.1", "--s
 两次退出码均为0，分别安装0.1.0和原地更新为0.1.1；pnpm锁文件把 `v0.1.1` 解析到代码提交 [3d09c484b64d8c890d40685c3bb3850dd3db77f7](https://github.com/wuyouchao/dsh-cursor-agent/commit/3d09c484b64d8c890d40685c3bb3850dd3db77f7)。原有bundle选择 `[fixture-base, dsh-cursor-agent]`、profile自定义字段、无关偏好和 `cordis.patch.yml` 字节均保留。新版本根入口、auth、typert、remote导入通过；`Config.parse(undefined)` 得到只读权限与启用沙箱，显式shell/false配置保持原值。未调用账号认证、模型或Agent。
 
 执行脚本为fixture的 `tooling/upgrade.mjs`，所有原生stdout/stderr经 `2>&1 | Tee-Object` 保存至 `upgrade-output.txt`；官方操作另各自产生 `profile/.plugin-manager/logs/operation-*/pnpm.log`。这证明官方包管理公共操作支持无需卸载的原地升级；不等同于用户Desktop GUI再次启用或真实授权通过。修复代码的 [GitHub Actions run 39740793448](https://github.com/wuyouchao/dsh-cursor-agent/actions/runs/39740793448) 的Windows和Linux检查均成功。
+
+## Host 共享模块与预设作用域回归
+
+后续实机报告标准预设无法加载：`deployment:persona-prefix` 已注册，以及 standing `modelSelectionSettings` 缺少 scoped preset Context。官方预设注册会立即挂载常驻组合；设置页列表读取其诊断，查看配置只导出 YAML，并不会建立另一个预览 Agent。真实会话绑定同样检查该诊断，因此不能将此错误视为只影响设置页预览。
+
+独立回归 `test/host-integration.test.ts` 使用两个临时物理依赖树，并通过官方公开 `createRuntimeResolution` 与 `PluginPackages` 安装真实 Host/profile 解析器。旧树复制真实发布的 `dsh-scope`、`dsh-system-prompt` 包到 profile 本地依赖；新树不含这些副本。测试检查实际 `packageOf` 解析路径和模块函数身份，不使用假 Context 或 ESM query 来代替安装解析。
+
+旧树中 profile 的 scope 与 Host scope 函数不是同一实例，无法读取 Host 创建的 scope tag；真实 Loader、SystemPrompt、AgentPresetRegistry、Persona 挂载因此重现 `deployment:persona-prefix ... already registered`，roster 标为 broken，真正的预设 mount 也拒绝。新树由 peer 回退至 Host 的同一实例，预设真实挂载成功，人设仅覆盖该 scope，全局人设保持原值。manifest 回归同时禁止在生产 dependencies 重新加入 Host 的 `@deepseek-ai/*` 服务定义包，并检查 peer 与开发验证版本一致。
+
+该最小双树模型复现模块身份问题及同一 persona 症状，不能等同于完整旧 Desktop 的全部 bundle 启动。实际安装的旧依赖清理、完整UI运行和用户再次验证须单独记录；上述测试不登录、不执行模型或文件工具、不修改现有 profile。当前定向测试3/3通过；后续全量检查和更多子Agent作用域覆盖以实际结果更新。
+
+当前实现复查：cordis.patch.yml 只有 insert 与 config:{}；src/index.ts 不再调用 applyRuntime 或注册全局 factory/LLM adapter，转为独立运行域与 cursorTasks 服务。最新树的 Host 共享模块定向回归再次3/3通过。完整产物及升级验证见下节。
+
+## 0.2.0 独立菜单、任务与原地升级验收
+
+2026-10-22 执行 `npm run check`：Typert 生成、严格类型、格式、生产构建均通过，**87/87 离线测试通过**，无跳过。日志保存在 `.local/pack-check/v0.2.0-check-output.txt`。源码与 dist 入口分别覆盖省略配置、实际 patch、空对象、显式权限和非法配置；真实 ACTIVE 状态下账号及任务服务就绪，预先注册的模型 adapter 与 factory 保持不变。真实 JSONL 回归覆盖多轮文本、工具宣告与记录、关闭后恢复、取消、缺 checkpoint 及不可继续状态。SDK 使用离线替身，未调用付费模型。
+
+客户端 15 项测试包含账号订阅共享、重连代际、任务选择、取消标识和模型请求永不结算时仍可读取本机历史。额外使用真实官方 Context、SlotRegistry 和 ClientRemote 挂载客户端：`settings.section` 的 `cursor`、`sidebar.panellist` 的 `cursor-tasks` 与 keyed `main` 配对成功，账号 store 共用，注册阶段零 RPC，卸载后所有入口移除。证据为 `.local/ui-preview/real-menu-verification.json`。真实组件和官方 Button 的离线页面通过 Edge 截图，覆盖未登录、模型就绪、运行中、离线历史和不可继续状态；375 与 1000 像素宽度均无水平溢出，共七张截图，指标位于 `.local/ui-preview/tasks-metrics.json`。这些是隔离页面和真实插槽的验证，不是用户 Desktop 全应用的实机截图。
+
+在新的仓库外目录 `I:/dsh-cursor-agent-install-temp/v020-final-cbca03fbf69c4c9aa19d47a259490efb`，使用 Desktop Node 24.21.0、pnpm 11.28.5 与官方 `runProfilePnpm`，从 Git 标签 `v0.1.1` 原地升级到本地最终代码 tgz `0.2.0`。保持 `nodeLinker: hoisted`、`autoInstallPeers: false`、`allowBuilds: {}`、`ignoreScripts: false`，清空 NODE_PATH，使用新 store；没有卸载步骤。两次安装退出码均为 0，新版移除 23 个不再需要的 Host 包，profile 中原有 scope/agent/system-prompt/Cordis 等副本消失，bundle 选择、无关配置和自定义 patch 保留。日志为该目录的 `migration-output.txt`。此时 tgz SHA256 为 `C710EF47A4ACEAC44FE7A3BAF2DF3620216AF673765BA08278019EAF710AB4CE`；之后仅补充本文档，不改变已验代码及编译产物。
+
+随后通过真实 `PluginPackages` 与 `createRuntimeResolution` 导入并激活升级后的完整安装入口，达到 ACTIVE，`cursorAccount`、`cursorTasks` 就绪，插件与安装域 scope/agent 函数严格同一实例；已有 adapter 和 factory 的身份保持不变，插件卸载只移除自身服务。脚本为 `.local/pack-check/verify-v020-resolver.mjs`，日志为 fixture 的 `full-resolver-output.txt`。安装域使用仓库中精确版本的官方 Host 包，未启动 Desktop ASAR 全应用。纯 profile 的 pnpm 缺 Host peer 警告符合关闭自动安装 peer 的预期，实际依赖由 Harness 的解析器提供，不能用裸 Node 导入或 `pnpm peers check` 替代此项验证。
+
+本次未修改用户真实 profile，未执行浏览器授权、真实账号目录请求、付费对话或 SDK Windows 沙箱实测。新建未发送的任务没有有效 checkpoint 时，重启后显示“不可继续”；恢复检查不会创建空 Agent 冒充成功。

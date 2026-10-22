@@ -341,9 +341,9 @@ export class CursorFactory {
             throw new AggregateError(failed.map((r) => r.reason), "Cursor运行时释放失败");
     }
 }
-export async function applyRuntime(ctx, config = {}, account) {
+export async function createRuntimeSdk() {
     const { Agent, Cursor, JsonlLocalAgentStore } = await import("@cursor/sdk");
-    const factory = new CursorFactory(ctx, config, {
+    return {
         create: async (options) => {
             try {
                 return await Agent.create(options);
@@ -369,7 +369,10 @@ export async function applyRuntime(ctx, config = {}, account) {
             }
         },
         store: (path) => new JsonlLocalAgentStore(path),
-    });
+    };
+}
+export async function applyRuntime(ctx, config = {}, account) {
+    const factory = new CursorFactory(ctx, config, await createRuntimeSdk());
     ctx.effect(() => registerRuntimeProjections(ctx), "cursor.projections");
     ctx.effect(() => {
         const registration = ctx.llm.registerAdapter([CURSOR_PROVIDER], factory.catalog);

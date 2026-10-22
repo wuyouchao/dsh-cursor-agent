@@ -196,12 +196,46 @@ export class CursorEventProjector {
       this.closeBlock();
       const callId = ToolCallId(message.call_id);
       if (!this.calls.has(message.call_id)) {
+        const argumentsText = safeJson(message.args ?? {});
+        const block: ContentBlock = {
+          type: "tool-call",
+          id: callId,
+          name: message.name,
+          arguments: argumentsText,
+        };
+        // V4 要求工具开始前已有 assistant 宣告；此记录只描述 SDK 已执行的原生调用。
+        const declaration = new AssistantStreamAccumulator();
+        const time = (o.now ?? Date.now)();
+        for (const chunk of [
+          { type: "block-start", index: 0, blockType: "tool-call" },
+          {
+            type: "tool-call-delta",
+            index: 0,
+            id: callId,
+            name: message.name,
+            argumentsDelta: argumentsText,
+          },
+          { type: "block-end", index: 0, block },
+          { type: "finish", reason: { kind: "tool-calls" } },
+        ] satisfies StreamChunk[])
+          declaration.push({ time, chunk });
+        o.append("assistant/message", {
+          turn: o.turn,
+          step: o.step,
+          message: {
+            id: MessageId(randomUUID()),
+            role: "assistant",
+            source: { kind: "model", provider: "cursor", model: o.model },
+            content: [block],
+          },
+          stream: [...declaration.snapshot()],
+        });
         o.append("tool/call", {
           turn: o.turn,
           step: o.step,
           callId,
           name: message.name,
-          arguments: safeJson(message.args ?? {}),
+          arguments: argumentsText,
         });
         this.calls.add(message.call_id);
       }

@@ -30,6 +30,8 @@ export declare class CursorNativeAgent implements Agent {
     private readonly submitted;
     constructor(ctx: Context, id: SessionId, options: AgentOptions, session: Session, sdk: SDKAgent, selection: ModelSelection, flush: () => Promise<void>);
     get status(): "idle" | "running";
+    /** 独立任务 UI 使用；官方 Agent 状态协议没有失败态，不能把失败冒充可继续。 */
+    get unavailable(): boolean;
     private statusChanged;
     activate(): void;
     send(message: UserMessage, target: InboxTarget, wakeup: boolean): void;

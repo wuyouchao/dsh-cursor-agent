@@ -105,7 +105,7 @@ test("原生工具事件只记录一次 call/result", async () => {
   projector.onMessage(message);
   assert.deepEqual(
     events.map((event) => event.type),
-    ["tool/call", "tool/result"],
+    ["assistant/message", "tool/call", "tool/result"],
   );
   await projector.settle();
 });
@@ -219,7 +219,8 @@ test("工具非JSON值规范化且usage只映射已声明字段", async () => {
     args: circular,
     result: [2n, undefined, circular],
   });
-  const call = events[0]!.data as SessionEventMap["tool/call"];
+  const call = events.find((event) => event.type === "tool/call")!
+    .data as SessionEventMap["tool/call"];
   assert.deepEqual(JSON.parse(call.arguments), {
     value: { $bigint: "1" },
     absent: { $unsupported: "undefined" },

@@ -442,13 +442,9 @@ export class CursorFactory implements AgentFactory {
   }
 }
 
-export async function applyRuntime(
-  ctx: Context,
-  config: RuntimeConfig = {},
-  account?: AccountCatalogSource,
-): Promise<void> {
+export async function createRuntimeSdk(): Promise<RuntimeSdk> {
   const { Agent, Cursor, JsonlLocalAgentStore } = await import("@cursor/sdk");
-  const factory = new CursorFactory(ctx, config, {
+  return {
     create: async (options) => {
       try {
         return await Agent.create(options);
@@ -471,7 +467,15 @@ export async function applyRuntime(
       }
     },
     store: (path) => new JsonlLocalAgentStore(path),
-  });
+  };
+}
+
+export async function applyRuntime(
+  ctx: Context,
+  config: RuntimeConfig = {},
+  account?: AccountCatalogSource,
+): Promise<void> {
+  const factory = new CursorFactory(ctx, config, await createRuntimeSdk());
   ctx.effect(() => registerRuntimeProjections(ctx), "cursor.projections");
   ctx.effect(() => {
     const registration = ctx.llm.registerAdapter(

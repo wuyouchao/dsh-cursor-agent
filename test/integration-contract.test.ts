@@ -19,7 +19,7 @@ const conflicts = [
   "llm-pi-ai",
 ];
 
-test("真实 Harness patch 合成只修改专用模式目标，移除bundle恢复基底", async () => {
+test("真实 Harness patch 仅添加Cursor入口，保留官方配置及默认模型", async () => {
   const patch = parse(
     await readFile(new URL("../cordis.patch.yml", import.meta.url), "utf8"),
   ) as PatchOptions[];
@@ -51,16 +51,12 @@ test("真实 Harness patch 合成只修改专用模式目标，移除bundle恢�
   const original = structuredClone(base);
   const baseline = composeEntries([base]);
   const active = composeEntries([base, patch]);
-  for (const id of conflicts)
-    assert.equal(active.find((row) => row.id === id)?.disabled, true, id);
-  assert.deepEqual(
-    active.find((row) => row.id === "agent-default-model")?.config,
-    { provider: "cursor", model: "default" },
-  );
-  assert.deepEqual(
-    active.find((row) => row.id === "user-unrelated"),
-    baseline.find((row) => row.id === "user-unrelated"),
-  );
+  for (const row of baseline)
+    assert.deepEqual(
+      active.find((candidate) => candidate.id === row.id),
+      row,
+      String(row.id),
+    );
   assert.equal(active.filter((row) => row.id === "dsh-cursor-agent").length, 1);
   assert.deepEqual(base, original, "合成不得原地修改基底");
   assert.deepEqual(
@@ -73,14 +69,24 @@ test("真实 Harness patch 合成只修改专用模式目标，移除bundle恢�
 test("真实生成Host与Client契约一致且watch直接转交流handle", () => {
   const metadata = TYPERT as { invocations: InvocationDescriptor[] };
   assert.ok(Array.isArray(metadata.invocations));
-  assert.equal(metadata.invocations.length, 6);
+  assert.equal(metadata.invocations.length, 14);
+  assert.equal(
+    metadata.invocations.filter((value) => value.namespace === "cursorAccount")
+      .length,
+    6,
+  );
+  assert.equal(
+    metadata.invocations.filter((value) => value.namespace === "cursorTasks")
+      .length,
+    8,
+  );
   for (const host of metadata.invocations) {
     const client =
       TYPERT_REMOTE.methods[
-        `cursorAccount/${host.method}` as keyof typeof TYPERT_REMOTE.methods
+        `${host.namespace}/${host.method}` as keyof typeof TYPERT_REMOTE.methods
       ];
     assert.ok(client);
-    assert.equal(host.namespace, "cursorAccount");
+    assert.ok(["cursorAccount", "cursorTasks"].includes(host.namespace));
     assert.equal(host.id, client.id);
     assert.equal(host.result.mode, "strict");
     if (host.result.mode === "strict")
@@ -140,6 +146,7 @@ test("已构建客户端按Harness lazy factory注册，加载前不执行依赖
   });
   assert.equal(registration?.id, "dsh-cursor-agent");
   assert.equal(typeof registration?.factory, "function");
-  assert.match(source, /settings\.models\.footer/);
+  assert.match(source, /settings\.section/);
+  assert.match(source, /cursorTasks/);
   assert.doesNotMatch(source, /secret-key|apiKey\s*:/);
 });

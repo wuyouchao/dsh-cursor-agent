@@ -13,6 +13,7 @@ const signedOut: AccountState = {
 function fixture() {
   let signal: AbortSignal | undefined;
   let cancelled: string | undefined;
+  let watches = 0;
   let resolveLogin:
     ((value: { ok: true; value: AccountState }) => void) | undefined;
   const remote: AccountRemote = {
@@ -28,6 +29,7 @@ function fixture() {
       return { ok: true, value: signedOut };
     },
     watch(nextSignal) {
+      watches++;
       return {
         send() {},
         end() {},
@@ -48,6 +50,7 @@ function fixture() {
     store: new CursorAccountStore(remote),
     signal: () => signal,
     cancelled: () => cancelled,
+    watches: () => watches,
     complete: (state: AccountState) =>
       resolveLogin?.({ ok: true, value: state }),
   };
@@ -61,6 +64,17 @@ test("页面卸载停止观察，不取消任何登录；重复清理安全", as
   unmount();
   assert.equal(f.signal()?.aborted, true);
   assert.equal(f.cancelled(), undefined);
+});
+test("Cursor 独立设置页和模型页共用观察，最后一个页面卸载才停止", async () => {
+  const f = fixture();
+  const closeCursor = f.store.mount();
+  const closeModels = f.store.mount();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(f.watches(), 1);
+  closeCursor();
+  assert.equal(f.signal()?.aborted, false);
+  closeModels();
+  assert.equal(f.signal()?.aborted, true);
 });
 test("显式取消始终发送点击时的 attemptId", async () => {
   const f = fixture();

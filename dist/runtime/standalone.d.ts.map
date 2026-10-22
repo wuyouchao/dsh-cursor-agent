@@ -1,0 +1,1 @@
+{"version":3,"file":"standalone.d.ts","sourceRoot":"","sources":["../../src/runtime/standalone.ts"],"names":[],"mappings":"AAYA,OAAO,KAAK,EAAE,aAAa,EAAE,UAAU,EAAE,MAAM,YAAY,CAAC;AAO5D,OAAO,KAAK,EAEV,iBAAiB,EAIlB,MAAM,oBAAoB,CAAC;AAK5B,8CAA8C;AAC9C,wBAAsB,uBAAuB,CAC3C,MAAM,EAAE,aAAa,GAAG;IAAE,cAAc,EAAE,MAAM,CAAA;CAAE,EAClD,WAAW,CAAC,EAAE,UAAU,GACvB,OAAO,CAAC,iBAAiB,CAAC,CA2U5B"}

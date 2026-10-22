@@ -13,7 +13,8 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "paths": {
-      "dsh-cursor-agent/shared/account": ["./src/shared/account.ts"]
+      "dsh-cursor-agent/shared/account": ["./src/shared/account.ts"],
+      "dsh-cursor-agent/shared/tasks": ["./src/shared/tasks.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts"]

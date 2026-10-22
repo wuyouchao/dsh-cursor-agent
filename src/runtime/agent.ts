@@ -83,6 +83,10 @@ export class CursorNativeAgent implements Agent {
   get status(): "idle" | "running" {
     return this.running ? "running" : "idle";
   }
+  /** 独立任务 UI 使用；官方 Agent 状态协议没有失败态，不能把失败冒充可继续。 */
+  get unavailable(): boolean {
+    return this.failure !== undefined;
+  }
   private statusChanged(running: boolean) {
     if (running === this.running) return;
     this.running = running;
