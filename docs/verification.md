@@ -15,7 +15,7 @@
 | A7   | 取消：create/send/stream/wait 边界与并发取消；结束后不遗留运行；卸载期间停止新请求并释放资源                                                                                                      | 自动验证通过：create晚返回、owner取消、send晚返回、cancel/wait双门控、人工交互取消挂起5秒明确失败并停用Agent。不可取消SDK永久挂起不宣称已停止。 |
 | A8   | 专用 Cursor 模式：默认 Agent loop 不与 Cursor factory 同时注册；相关后台 LLM 任务无冲突；模型选择与运行一致                                                                                       | 自动验证通过：真实注册表拒绝第二factory，真实patch合成停用冲突目标，模型参数传入SDK替身。Desktop整套启动未执行。                                |
 | A9   | bundle patch：添加/删除补丁后配置可恢复；不覆盖无关用户配置，不冒用 DeepSeek namespace                                                                                                            | 自动验证通过：真实composeEntries添加/移除bundle层还原基底及原模型参数，无关配置保持原值。                                                       |
-| A10  | `npm pack` 检查含服务端与客户端产物；使用 Desktop pnpm 11、全新空 store、allowBuilds: {} 与 ignoreScripts: false 安装后入口可加载；包无 prepare/install 构建脚本；tgz 与固定提交 Git 安装分别记录 | tgz干净安装自动验证通过，详见下方证据；固定SHA Git安装待调度者提交后执行。                                                                      |
+| A10  | `npm pack` 检查含服务端与客户端产物；使用 Desktop pnpm 11、全新空 store、allowBuilds: {} 与 ignoreScripts: false 安装后入口可加载；包无 prepare/install 构建脚本；tgz 与固定提交 Git 安装分别记录 | tgz与远端固定代码SHA Git安装均通过，详见下方独立证据；未执行Desktop GUI或真实账号运行。                                                         |
 
 ## 用户真实环境验收（本次未执行）
 
@@ -57,6 +57,25 @@ ignoreScripts: false
 
 以下检查均通过：根入口、`/auth`、`/typert`、`/remote`、`/shared/account` 动态导入；Cursor SDK 导入；`/client` 文件及 lazy-CJS 工厂注册；CLI `--help`；第三方许可存在；包无 prepare、preinstall、install、postinstall 或 prepack 脚本。只导入 SDK，不执行登录、模型目录请求或付费模型。
 
-当次 tgz SHA256：`4329356A4A071FB53C9FF62C7833DC63BAB8E0F91B70F1C0EAC5FDFEDC3123B1`。本机执行命令、环境与摘要保存在该 fixture 的 `evidence.txt`，原生命令结果见本次执行工具记录；验证脚本为 `verify.mjs`。本记录证明预编译 tgz 可安装和加载；固定提交 SHA 的 Git 安装尚待提交后另行验证，不等同于 Desktop UI、真实授权或真实对话通过。
+当次 tgz SHA256：`4329356A4A071FB53C9FF62C7833DC63BAB8E0F91B70F1C0EAC5FDFEDC3123B1`。本机执行命令、环境与摘要保存在该 fixture 的 `evidence.txt`，原生命令结果见本次执行工具记录；验证脚本为 `verify.mjs`。本记录证明预编译 tgz 可安装和加载；该tgz预检不等同于 Desktop UI、真实授权或真实对话通过；固定SHA Git结果另见下节。
 
-此摘要仅对应当次 tgz 字节；随后文档或构建产物变化会改变包摘要。最终远端固定提交 SHA 的 Git 安装需另行验证。
+此摘要仅对应当次 tgz 字节；随后文档或构建产物变化会改变包摘要。固定代码SHA的远端Git安装已独立验证，证据见下节。
+
+## A10：远端固定代码 SHA 的 Git 安装
+
+2026-10-22 对已推送代码提交 [641885d41a0dfeefc20ae294e0d4dded4cc65220](https://github.com/wuyouchao/dsh-cursor-agent/commit/641885d41a0dfeefc20ae294e0d4dded4cc65220) 独立验证通过。fixture 位于仓库外 `I:/dsh-cursor-agent-install-temp/git-6da8e3ceddeb4263a3753902f317197f`，无祖先 node_modules，NODE_PATH已清除，使用新的空store。Desktop Node `24.21.0`、pnpm `11.28.5`；仍启用 `nodeLinker: hoisted`、`autoInstallPeers: false`、`allowBuilds: {}`、`ignoreScripts: false`。
+
+fixture只有两个直接依赖：宿主 `@deepseek-ai/cordis@4.0.5` 与 `github:wuyouchao/dsh-cursor-agent#641885d41a0dfeefc20ae294e0d4dded4cc65220`。pnpm锁文件的specifier与codeload tarball均指向此完整SHA，未使用浮动main。
+
+以下命令用 Desktop 自带 node.exe 执行 pnpm.cjs；原生命令的stdout/stderr显式捕获：
+
+```powershell
+& $DesktopNode $DesktopPnpm install --store-dir ./isolated-store --reporter append-only 2>&1 | Tee-Object install-output.txt
+& $DesktopNode verify.mjs 2>&1 | Tee-Object verify-output.txt
+& $DesktopNode node_modules/dsh-cursor-agent/dist/cli.js --help 2>&1 | Tee-Object cli-output.txt
+& $DesktopNode $DesktopPnpm peers check 2>&1 | Tee-Object peers-output.txt
+```
+
+安装29包、4.8秒完成，退出码0，没有prepare/install构建脚本审批阻断。根入口、auth、typert、remote、shared/account、SDK导入、client文件及lazy工厂注册、预编译产物/许可/无安装脚本断言全部通过；CLI帮助退出0；peer检查输出 `No peer dependency issues found`，退出码0。日志与verify.mjs保存在上述fixture；已核实输出文件非空。未登录、未读取账号状态、未请求模型目录、未进行付费对话，也未修改用户profile。
+
+该SHA是已验证的代码提交；本节证据属于之后的独立文档更新，不改变已验代码SHA。
