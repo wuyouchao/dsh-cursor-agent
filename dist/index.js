@@ -9,13 +9,15 @@ export const inject = [
     "sessionPersistence",
     "sessionProjections",
 ];
-export const Config = z.object({
+export const Config = z
+    .object({
     stateDirectory: z.string().min(1).optional(),
     permissionMode: z
         .enum(["readonly", "workspace-write", "shell"])
         .default("readonly"),
     sandboxEnabled: z.boolean().default(true),
-});
+})
+    .prefault({});
 /** 专用 Cursor 模式：由官方 SDK 执行 Agent 与工具，Harness 负责展示。 */
 export async function apply(ctx, config = {}) {
     await ctx.plugin(CursorAccountService);

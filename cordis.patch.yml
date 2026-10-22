@@ -1,4 +1,4 @@
-# 0.1.0 是专用 Cursor 原生 Agent 模式；只停用与原生循环冲突的行为。
+# 0.1.1 是专用 Cursor 原生 Agent 模式；只停用与原生循环冲突的行为。
 - id: agent-loop
   disabled: true
 - id: session-title-llm
@@ -14,6 +14,7 @@
 - insert:
     - id: dsh-cursor-agent
       name: dsh-cursor-agent
+      config: {}
 - id: llm-deepseek
   disabled: true
 - id: llm-deepseek-account

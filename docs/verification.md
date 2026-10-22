@@ -79,3 +79,22 @@ fixture只有两个直接依赖：宿主 `@deepseek-ai/cordis@4.0.5` 与 `github
 安装29包、4.8秒完成，退出码0，没有prepare/install构建脚本审批阻断。根入口、auth、typert、remote、shared/account、SDK导入、client文件及lazy工厂注册、预编译产物/许可/无安装脚本断言全部通过；CLI帮助退出0；peer检查输出 `No peer dependency issues found`，退出码0。日志与verify.mjs保存在上述fixture；已核实输出文件非空。未登录、未读取账号状态、未请求模型目录、未进行付费对话，也未修改用户profile。
 
 该SHA是已验证的代码提交；本节证据属于之后的独立文档更新，不改变已验代码SHA。
+
+## 0.1.1 配置缺省加载回归
+
+用户在真实 Desktop 启用 0.1.0 时报告 `ValidationError: expected object, received undefined`。独立复现直接加载之前干净 Git 安装的 0.1.0 `dist/index.js`，挂载真实 SessionStore、AgentRegistry、TypertRegistry、LlmRuntime、SessionProjectionRegistry 与持久化服务后，以 `ctx.plugin(plugin)` 不传配置启动。`fiber.await()` 报错原文为：
+
+```text
+TypeError [ValidationError]: invalid config:
+  - Invalid input: expected object, received undefined (at )
+```
+
+调用栈进入 Cordis `resolveConfig → Fiber._resolveConfig → Fiber._reload → Fiber.await`。根因是生产导出的根 `Config` 只接受对象，而 bundle patch 的插件 entry 没有 `config`；Cordis 在执行 `apply` 之前校验，因此 `apply(ctx, config = {})` 无法补救根校验失败。
+
+之前的检查存在两个盲点：缺依赖测试只验证等待与卸载，`fiber.assertActive()` 并不证明已完成插件初始化；完整入口测试虽然挂载真实依赖，却总是显式传入 `{ stateDirectory }`，漏掉实际安装产生的无配置入口。类型检查、CI或干净安装导入成功也不能证明无配置插件已激活。
+
+0.1.1 对根配置提供预填对象，并在 bundle patch 显式给出空配置。新增回归同时加载源码和打包的生产默认导出，各覆盖五种路径：完全省略参数、从实际 `cordis.patch.yml` 经官方 `composeEntries` 提取 entry.config、空对象、显式 `shell`/`sandboxEnabled: false`、非法字段类型。成功路径必须到达真实 `ACTIVE` 状态，并验证账号服务、Cursor目录、唯一factory注册与卸载；显式权限保持原值。非法配置必须在 `fiber.await()` 拒绝并处于 `FAILED`，且未注册账号、目录或factory。
+
+修复后的定向命令 `node --import tsx --test --test-name-pattern '生产.*入口真实依赖配置路径' test/runtime-factory.test.ts` 为 **10/10通过**；`npx tsc --noEmit` 与测试文件格式检查通过。此处使用真实 Harness 生命周期与配置校验，未调用 SDK 认证、模型或Agent，也未修改用户 profile。最终全量检查、0.1.1包安装和用户Desktop再次启用结果须各自记录，不能从这10项通过推断真实授权或计费运行成功。
+
+0.1.1 最终全量检查：构建任务执行 npm run check，65/65测试通过，类型、格式与生产构建均通过（包含上述10项生产入口配置矩阵）。此结果修正了0.1.0省略配置的覆盖缺口；尚待用户Desktop重新启用验证。

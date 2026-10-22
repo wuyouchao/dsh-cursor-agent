@@ -2,7 +2,7 @@
 
 为 DeepSeek Harness 接入 Cursor 官方 SDK 的账号管理、动态模型目录与原生 Agent。
 
-`0.1.0` 提供专用 Cursor 模式：Cursor 执行 Agent 循环和实际工具，Harness 展示会话、流式文本与工具记录。工具事件只用于展示，不会在 Harness 再执行一次。
+`0.1.1` 提供专用 Cursor 模式：Cursor 执行 Agent 循环和实际工具，Harness 展示会话、流式文本与工具记录。工具事件只用于展示，不会在 Harness 再执行一次。
 
 ## 能力与验证范围
 
@@ -36,6 +36,10 @@ Web 用户将 `desktop` 替换为已有的 `web` profile。安装后重新启动
 
 Git 安装直接使用仓库中的 `dist/` 与 `lib/` 预编译产物，不执行 `prepare` 等安装构建脚本。若失败页面仍引用旧版本或 `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`，重新添加固定的新提交；旧任务的重试可能继续使用旧代码。
 
+升级无需先卸载：完全退出 Desktop，使用上面的同一条 `dsh plugin --profile desktop add` 命令，将 Git 地址改为新版本的固定 SHA，完成后重启 Desktop。第三方插件在 GUI 中暂不提供更新操作，可使用此命令原地升级。
+
+`0.1.1` 修复了 `0.1.0` 在 Desktop 启用时因未提供插件配置而出现的 `invalid config: expected object, received undefined`。配置省略时会应用只读权限与启用沙箱的默认值；遇到该错误请升级到包含此修复的固定提交并重启 Harness。
+
 ## 使用与限制
 
 先在模型设置页连接 Cursor，选择目录中的模型，再新建会话。默认模型路由 `default` 由最新 Cursor 目录解析；独立 `maxTokens`、`reasoningEffort` 参数不映射为假支持，应使用目录提供的模型变体。
@@ -67,7 +71,7 @@ npm pack
 本地包可在专用 profile 中验收：
 
 ```sh
-dsh plugin --profile web add ./dsh-cursor-agent-0.1.0.tgz
+dsh plugin --profile web add ./dsh-cursor-agent-0.1.1.tgz
 ```
 
 此命令会修改指定 profile，应由用户自行在验证环境执行。项目未发布 npm 包，`private: true` 防止误发布。

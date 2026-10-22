@@ -708,3 +708,130 @@ test("人工交互请求的cancel永久挂起时有界收尾且不再复用Agent
     await f.cleanup();
   }
 });
+
+for (const face of ["source", "dist"] as const) {
+  for (const mode of [
+    "omitted",
+    "patch",
+    "empty",
+    "explicit",
+    "invalid",
+  ] as const) {
+    test(`生产${face}入口真实依赖配置路径：${mode}`, async () => {
+      const { default: LlmRuntime } = await import("@deepseek-ai/dsh-llm");
+      const { default: ProjectionRegistry } =
+        await import("@deepseek-ai/dsh-session-projection");
+      const { default: TypertRegistry } =
+        await import("@deepseek-ai/dsh-typert-registry");
+      const plugin =
+        face === "source"
+          ? (await import("../src/index.js")).default
+          : (await import("../dist/index.js")).default;
+      const root = await mkdtemp(join(tmpdir(), "cursor-config-load-"));
+      const ctx = new Context();
+      try {
+        await ctx.plugin(SessionStore);
+        await ctx.plugin(AgentRegistry);
+        await ctx.plugin(MemoryPersistence);
+        await ctx.plugin(TypertRegistry);
+        await ctx.plugin(LlmRuntime);
+        await ctx.plugin(ProjectionRegistry);
+        let config: unknown;
+        if (mode === "patch") {
+          const { readFile } = await import("node:fs/promises");
+          const { parse } = await import("yaml");
+          const { composeEntries } = await import("@deepseek-ai/dsh-app-boot");
+          const layers = parse(
+            await readFile(
+              new URL("../cordis.patch.yml", import.meta.url),
+              "utf8",
+            ),
+          ) as Parameters<typeof composeEntries>[0][number];
+          const entry = composeEntries([layers]).find(
+            (row) => row.id === "dsh-cursor-agent",
+          );
+          assert.ok(entry, "取实际bundle patch产生的插件entry");
+          config = entry.config;
+        } else if (mode === "empty") config = {};
+        else if (mode === "explicit")
+          config = {
+            stateDirectory: root,
+            permissionMode: "shell",
+            sandboxEnabled: false,
+          };
+        else if (mode === "invalid")
+          config = { permissionMode: 123, sandboxEnabled: "false" };
+        const fiber =
+          mode === "omitted"
+            ? ctx.plugin(plugin)
+            : ctx.plugin(plugin, config as Parameters<typeof plugin.apply>[1]);
+        if (mode === "invalid") {
+          await assert.rejects(
+            fiber.await(),
+            /permissionMode|sandboxEnabled|Invalid|Expected/i,
+          );
+          assert.equal(fiber.state, 3, "真实FAILED状态，未启动apply");
+          assert.equal(
+            ctx.llm
+              .listProviders()
+              .some((provider) => provider.id === "cursor"),
+            false,
+          );
+          assert.throws(() => ctx.cursorAccount.getState());
+          const release = ctx.agents.setFactory({
+            createAgent: async () => {
+              throw new Error("unused");
+            },
+            resume: async () => {
+              throw new Error("unused");
+            },
+          });
+          release();
+        } else {
+          await fiber.await();
+          assert.equal(
+            fiber.state,
+            2,
+            "必须真正ACTIVE，不能仅依赖assertActive",
+          );
+          assert.equal(ctx.cursorAccount.getState().status, "signed-out");
+          assert.ok(
+            ctx.llm
+              .listProviders()
+              .some((provider) => provider.id === "cursor"),
+          );
+          assert.throws(
+            () =>
+              ctx.agents.setFactory({
+                createAgent: async () => {
+                  throw new Error("unused");
+                },
+                resume: async () => {
+                  throw new Error("unused");
+                },
+              }),
+            /factory|already|registered/i,
+          );
+          assert.equal(
+            fiber.config.permissionMode,
+            mode === "explicit" ? "shell" : "readonly",
+          );
+          assert.equal(
+            fiber.config.sandboxEnabled,
+            mode === "explicit" ? false : true,
+          );
+          if (mode === "explicit")
+            assert.equal(fiber.config.stateDirectory, root);
+        }
+        await fiber.dispose();
+        assert.equal(
+          ctx.llm.listProviders().some((provider) => provider.id === "cursor"),
+          false,
+        );
+      } finally {
+        await ctx.fiber.dispose();
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+  }
+}
