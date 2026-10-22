@@ -1,7 +1,7 @@
 # 项目约定
 
 - 使用中文回答用户问题、编写文档及面向用户的提示。
-- 当前是插件初始化阶段。以 `docs/research/` 的接口研究和 `docs/architecture.md` 为实现依据。
+- 当前是专用 Cursor 原生 Agent MVP 阶段。以 `docs/research/` 的接口研究和 `docs/architecture.md` 为实现依据。
 - 保留 Cursor 原生 Agent 执行流程；工具事件仅用于展示，不在 Harness 再执行同一个工具。
 - 未核实的接口不要用占位成功结果实现；明确区分已实现、已查证和未实测。
 - Cursor 凭据由官方 SDK 管理，不读取其私有凭据文件结构，不把 API Key 写入日志、会话或客户端响应。

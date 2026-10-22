@@ -8,8 +8,9 @@
     "inlineSources": true,
     "newLine": "lf",
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "noEmitOnError": true
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["test"]
 }

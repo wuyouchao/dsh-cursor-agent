@@ -24,6 +24,6 @@ jobs:
       - name: 检查已提交的编译产物
         shell: bash
         run: |
-          git diff --exit-code -- dist
-          test -z "$(git ls-files --others --exclude-standard -- dist)"
+          git diff --exit-code -- dist lib
+          test -z "$(git ls-files --others --exclude-standard -- dist lib)"
       - run: npm pack --dry-run

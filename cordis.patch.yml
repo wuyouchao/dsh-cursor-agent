@@ -1,4 +1,22 @@
-# 初始化版本只加载宿主入口，不替换现有 AgentFactory。
+# 0.1.0 是专用 Cursor 原生 Agent 模式；只停用与原生循环冲突的行为。
+- id: agent-loop
+  disabled: true
+- id: session-title-llm
+  disabled: true
+- id: plan-mode
+  disabled: true
+- id: compaction-basic
+  disabled: true
+- id: agent-default-model
+  config:
+    provider: cursor
+    model: default
 - insert:
     - id: dsh-cursor-agent
       name: dsh-cursor-agent
+- id: llm-deepseek
+  disabled: true
+- id: llm-deepseek-account
+  disabled: true
+- id: llm-pi-ai
+  disabled: true

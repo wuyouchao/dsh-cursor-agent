@@ -1,0 +1,1 @@
+{"version":3,"file":"CursorAccountCard.d.ts","sourceRoot":"","sources":["../../src/client/CursorAccountCard.tsx"],"names":[],"mappings":"AAGA,OAAO,KAAK,EAAE,kBAAkB,EAAE,MAAM,YAAY,CAAC;AAErD,OAAO,EAAE,YAAY,EAAE,MAAM,cAAc,CAAC;AAoB5C,gCAAgC;AAChC,wBAAgB,iBAAiB,CAAC,EAChC,UAAU,GACX,EAAE;IACD,UAAU,EAAE,kBAAkB,CAAC;CAChC,2CAgKA"}

@@ -4,7 +4,7 @@
 
 ## 1. 插件入口和依赖
 
-宿主插件导出 `name`、`apply(ctx, config)`，需要时导出 `inject` 和 `Config`。也可使用 `Service` 子类。`inject` 指明实际消费的服务，不靠 YAML 行顺序解决依赖。当前初始化入口只用 Cordis 内置 logger，因此无需 `inject`。
+宿主插件导出 `name`、`apply(ctx, config)`，需要时导出 `inject` 和 `Config`。也可使用 `Service` 子类。`inject` 指明实际消费的服务，不靠 YAML 行顺序解决依赖。当前 MVP 入口显式注入 agents、sessions、llm、sessionPersistence 与 sessionProjections；测试必须挂载这些真实依赖后再验证插件可用。
 
 ```ts
 import type { Context } from "@deepseek-ai/cordis";
@@ -73,7 +73,7 @@ interface AgentHandle {
 
 远程服务采用 `TypertRemoteService`、`@Remote` 和生成的 `./typert`、`./remote` 产物。客户端调用 `ctx.remote.<namespace>`，按 `RemoteResult.ok` 处理结果。后续登录 UI 应发送登录开始/取消请求、展示授权 URL、订阅状态；认证密钥只留在宿主。
 
-这部分先写入方案，不在初始化时伪造旧式 HTTP 路由。
+当前已用官方 Typert 生成器生成 Host 与 Client 契约，不伪造旧式 HTTP 路由。
 
 来源：[设置卡片](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/docs/cookbook/adding-a-settings-card.md)、[客户端模块协议](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/packages/client/modules/README.md)、[远程 API](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/docs/cookbook/adding-a-remote-api.md)。
 
@@ -81,4 +81,4 @@ interface AgentHandle {
 
 `@deepseek-ai/dsh-agent@0.2.1-rc.2` 确实存在，但研究时它的 `latest` 标签仍指向 `0.1.0-rc.6`。当前 CLI 为 `0.2.1-rc.2`，Cordis peer 为 `~4.0.5`。实现时必须精确选择同批 Harness 包，不能混用各包的 latest。
 
-初始化只安装实际使用的 Cordis 和 Cursor SDK；等实现 factory、Session、Typert 或浏览器扩展时，再加入对应的同版 Harness 包。
+当前 MVP 已按实际使用加入固定同版 Harness Agent、Session、Typert 与客户端包；依赖版本以 package.json 和锁文件为准。

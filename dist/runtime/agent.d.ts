@@ -1,0 +1,47 @@
+import type { Context } from "@deepseek-ai/cordis";
+import type { Agent, AgentOptions, AgentCancelCause, CancelOptions, InboxTarget } from "@deepseek-ai/dsh-agent";
+import type { SDKAgent, ModelSelection } from "@cursor/sdk";
+import type { Session, SessionId } from "@deepseek-ai/dsh-session";
+import type { UserMessage } from "@deepseek-ai/dsh-llm";
+import { CursorInbox } from "./inbox.js";
+export declare class CursorNativeAgent implements Agent {
+    readonly id: SessionId;
+    readonly options: AgentOptions;
+    readonly session: Session;
+    private sdk;
+    private selection;
+    private flush;
+    readonly scope: import("@deepseek-ai/dsh-scope").Scope;
+    readonly ctx: Context;
+    readonly dispatch: import("@deepseek-ai/dsh-agent").AgentEventDispatch;
+    readonly inbox: CursorInbox;
+    private active;
+    private run;
+    private cancelled;
+    private disposed;
+    private ready;
+    private revision;
+    private turn;
+    private running;
+    private activityAbort;
+    private sendTask;
+    private cancellationTask;
+    private failure;
+    private readonly submitted;
+    constructor(ctx: Context, id: SessionId, options: AgentOptions, session: Session, sdk: SDKAgent, selection: ModelSelection, flush: () => Promise<void>);
+    get status(): "idle" | "running";
+    private statusChanged;
+    activate(): void;
+    send(message: UserMessage, target: InboxTarget, wakeup: boolean): void;
+    followup(message: UserMessage): void;
+    steer(_message: UserMessage): never;
+    inject(_message: UserMessage): never;
+    runMaintenance<T>(_task: (signal: AbortSignal) => Promise<T>): Promise<T>;
+    cancel(cause: AgentCancelCause, options?: CancelOptions): void;
+    private stopNativeRun;
+    whenIdle(): Promise<void>;
+    private wake;
+    private drain;
+    close(): Promise<void>;
+}
+//# sourceMappingURL=agent.d.ts.map

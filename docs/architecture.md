@@ -1,84 +1,54 @@
-# 接入方案与分阶段验收
+# Cursor 专用模式架构与验收边界
 
-本方案基于 2026-10-22 的[Harness 研究](research/deepseek-harness.md)和[SDK 研究](research/cursor-sdk.md)。这是设计与实施计划，不是已完成能力列表。
+本方案依据 `research/` 的固定版本研究与官方 Harness 源码。`0.1.0` 已实现专用 Cursor 原生 Agent MVP；实现、离线自动验证和真实账号实测分别记录，不互相替代。
 
-## 1. 决策
-
-采用 Cursor 原生 Agent 模式：Harness 提供 Web UI、会话展示和生命周期入口，Cursor 管理 Agent 循环与实际工具执行。
+## 数据流与职责
 
 ```mermaid
 flowchart TD
-  UI[Harness Web UI] --> Remote[Typert 认证与状态服务]
-  Remote --> Auth[Cursor 官方 SDK 认证]
-  UI --> Factory[Cursor AgentFactory 适配]
+  UI[Harness 模型设置与会话] --> Account[Typert cursorAccount 安全状态服务]
+  Account --> Auth[Cursor 官方 SDK 认证与 me/models]
+  UI --> Catalog[独立 cursor 模型目录]
+  UI --> Factory[Cursor AgentFactory]
   Factory --> Agent[Cursor SDK 本地 Agent]
-  Agent --> Workspace[本地工作区与工具]
+  Agent --> Workspace[工作区与原生工具]
   Agent --> Model[Cursor 云端模型]
-  Agent --> Events[事件转换与去重]
-  Events --> Session[Harness 持久化消息与实时流]
-  Session --> UI
-  Factory --> Store[会话映射与 SDK checkpoint]
+  Agent --> Events[增量与最终事件投影]
+  Events --> Session[Harness 会话持久化与实时展示]
+  Factory --> Store[公开会话映射与 SDK checkpoint]
 ```
 
-只读/写入/Shell 权限由适配层与 Cursor 可执行的策略共同控制。Harness UI 中存在某个审批选项，不代表 Cursor 就能执行同样的审批流程。
+Cursor 管理 Agent 循环与工具执行。Harness 的工具记录仅用于展示，不二次执行。`cursor` 是独立提供方，不占用 DeepSeek namespace，也不提供伪造的通用 LLM 补全。
 
-## 2. 接口映射
+## 专用 profile 模式
 
-| Harness 侧                 | Cursor 侧                          | 适配责任                                   |
-| -------------------------- | ---------------------------------- | ------------------------------------------ |
-| `AgentFactory.createAgent` | `Agent.create({ local: { cwd } })` | 资源归属、工作区校验、创建后写映射         |
-| `AgentFactory.resume`      | `Agent.resume(agentId, options)`   | 使用固定 store，校验工作区及版本，配置重建 |
-| Agent 消息入口             | `agent.send(message, options)`     | 单会话排队、避免重复提交                   |
-| `cancel`                   | `run.cancel()`                     | 处理创建中取消、结束竞态及清理             |
-| `agent/assistant-stream`   | `onDelta`                          | 实时增量、attempt/revision、去重           |
-| Session 消息/工具记录      | `run.stream()`、`run.wait()`       | 持久化先于 committed end；工具只展示       |
-| 模型选择器                 | `Cursor.models.list()`             | 实时目录与参数映射，不能充当通用补全接口   |
-| 登录 UI（待开发）          | `Cursor.auth.login/status/logout`  | 登录URL与安全状态；不传递 Key              |
+Harness 只有一个创建 factory。bundle patch 停用默认 `agent-loop`、`session-title-llm`、`plan-mode`、`compaction-basic` 及 `llm-deepseek`、`llm-deepseek-account`、`llm-pi-ai`；设置默认提供方为 `cursor`、模型为 `default`。模型设置页与原账号配置数据保留。
 
-`followup/steer/inject/runMaintenance` 不能从 SDK `send` 自动推导等价实现。下一阶段应逐项确定语义；不支持的操作必须明确报告，不可返回假成功。
+补丁合成不原地修改基底配置。删除 bundle 层后恢复原配置，实际用户操作是卸载插件并重启；仅关闭宿主开关不足以移除 bundle patch。新实例建议采用专用验证 profile，已有非 Cursor 会话无法通过创建空 Cursor Agent 冒充恢复。
 
-## 3. 持久化与退出
+## 契约与生命周期
 
-建议保存带 schemaVersion 的独立映射记录，至少含 DSH session ID、Cursor agent ID、规范化 workspace、SDK store 位置与创建配置版本。Cursor checkpoint 和映射必须一致。缺失或不匹配时拒绝伪恢复，不静默新建会话。
+| Harness 入口               | Cursor 对应            | 实现边界                                                |
+| -------------------------- | ---------------------- | ------------------------------------------------------- |
+| `AgentFactory.createAgent` | `Agent.create`         | 工作区规范化、会话持久化handle、映射与发布事务          |
+| `resume`                   | `Agent.resume`         | 校验版本、工作区、权限、store与checkpoint，缺失明确失败 |
+| Agent 消息                 | `agent.send`           | 文本输入、单会话排队、唯一消息ID与多轮同Agent           |
+| `cancel`                   | `run.cancel`/`wait`    | 创建、send、stream与结束竞态，迟到资源回收与有限等待    |
+| `agent/assistant-stream`   | `onDelta`              | attempt/revision递增、delta/final去重                   |
+| 会话/工具事件              | `run.stream`/`wait`    | 工具只展示，最终committed先等待持久化                   |
+| `cursor` 模型目录          | `Cursor.models.list`   | 动态目录与变体参数，拒绝通用补全                        |
+| `cursorAccount`            | `auth`、`me`、`models` | 登录、取消、刷新、退出、流式安全快照                    |
 
-登录信息只由 SDK 管理，不能写入 session mapping。SDK 本地状态、模型请求状态与 Harness UI 状态分别记录和解释。
+Typert Host 与 Client 由官方生成器生成。流式客户端方法直接返回可异步迭代的 `RemoteStreamHandle`，不会套上 Promise 或 unary result。传输schema不是出站脱敏器；宿主显式构造安全DTO，SDK原始异常不会直接进入客户端。
 
-卸载按顺序处理：停止新请求、取消登录/运行、等待活动任务结束、排空持久化、释放 SDK/Context、移除注册。要验证取消发生在 create/send/stream/持久化边界时均可收尾。
+认证本机 stored 状态与连接成功区分：连接成功需要远端 `me` 和 `models` 均成功。环境变量凭据优先；退出只清除 SDK 保存凭据。凭据由官方 SDK 管理，插件不读取私有凭据结构，不持久化或展示 Key。
 
-## 4. 分阶段验收
+运行时停止新请求、取消活动事务/运行、排空持久化并释放注册。SDK的网络和存储操作存在不可取消边界；取消以epoch和资源回收守卫防止迟到结果覆盖新状态。无限挂起的SDK不会被伪装成成功终止；运行收尾超时后停止复用该Agent。
 
-### 阶段 0：本次初始化
+## 状态与限制
 
-- Cordis 插件能装载和卸载，补丁只插入自己的入口。
-- 官方认证薄包装及 login/status/logout CLI。
-- 登录结果不泄露 API Key，取消信号可以向 SDK 传递。
-- TypeScript 严格检查、离线测试、构建与本地打包。
-- 保存两边接口与实现边界。
+账号服务、客户端、目录、factory、流式投影、多轮、取消、恢复和Git预编译构建已有实现。自动验证使用真实Harness服务/生成契约及离线SDK替身，具体命令和结果见 [verification.md](verification.md)。
 
-### 阶段 1：只读原生 Agent 验证
+文本之外的图片输入、分叉、Harness 子Agent、steer/inject、人工交互审批响应与maintenance/压缩尚不支持，入口明确拒绝。默认只读工具和SDK沙箱配置不等于已经在Windows实测执行。
 
-- 采用同版本 Harness 包实现完整 AgentFactory 生命周期，在专用 profile 中替换默认 loop。
-- 显式受限工具配置，完成一次只读对话和取消。
-- UI 增量展示和持久消息一致，无重复文本、重复工具执行。
-- 所有资源在取消和卸载后释放；不支持的交互操作给出明确错误。
-
-### 阶段 2：持续会话与工具
-
-- 动态模型目录、参数与多轮对话。
-- 关闭进程后恢复相同 Cursor Agent，缺 checkpoint 时明确失败。
-- 独立验证写入、Shell、Windows 沙箱行为，不用 autoReview 替代强制限制。
-- 未支持的用户审批请求明确终止，界面不宣称已经支持审批。
-
-### 阶段 3：Harness 内登录
-
-- 按当前 Typert 协议提供登录开始、取消、状态与退出接口。
-- 生成兼容 Harness 的客户端模块，使用设置扩展点展示状态。
-- 客户端和日志无法取得 Key；重复登录、取消、超时和多窗口行为可预测。
-
-### 后续
-
-图片输入、MCP/Skills 配置、Diff、子 Agent、多工作区及远程访问按真实需求逐项验证。已有方案声称支持某项能力，不计作本项目验收通过。
-
-## 5. 不在初始化中承诺的能力
-
-当前没有完整 Web 集成、Cursor 模型调用或原生 Agent 执行，也没有修改用户的 Harness profile、Cursor 登录或远端仓库。真实认证、账号模型目录、工具执行和 CI 云端运行都需要后续实测。
+真实浏览器授权、真实账号模型、付费对话、SDK沙箱运行、用户Desktop完整流程尚未执行。用户验收步骤保留在验证记录中；本次自动检查不会修改现有profile或调用计费模型。

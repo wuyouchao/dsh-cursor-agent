@@ -1,0 +1,1 @@
+{"version":3,"file":"remote.js","sourceRoot":"","sources":["../src/remote.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,gCAAgC,CAAC;AACzD,cAAc,gCAAgC,CAAC","sourcesContent":["export { default } from \"../lib/typert.remote-client.js\";\nexport * from \"../lib/typert.remote-client.js\";\n"]}

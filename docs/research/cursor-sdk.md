@@ -26,7 +26,7 @@ Cursor.auth.logout(options?: SdkLogoutOptions): Promise<void>;
 
 `status` 仅描述保存的本地登录，结果为 `logged-out` 或带 backend/email/过期时间的 `logged-in`。它不检查环境变量，也不联系服务端验证 Key。`logout` 仅清本地存储，远端撤销需要由用户管理。
 
-初始化使用 SDK 默认凭据存储。若将来为 Harness 多用户服务提供独立存储，不能只给 login 传自定义 store：创建 Agent 时还需显式使用该存储中的 Key。
+当前 MVP 使用 SDK 默认凭据存储。若将来为 Harness 多用户服务提供独立存储，不能只给 login 传自定义 store：创建 Agent 时还需显式使用该存储中的 Key。
 
 来源：[官方认证接口](https://cursor.com/docs/sdk/typescript#cursor-auth)、发布包 `auth/login.d.ts` 与 `auth/credential-store.d.ts`。
 
@@ -57,7 +57,7 @@ agent[Symbol.asyncDispose](): Promise<void>;
 
 工具事件可依赖的外层字段为 `call_id/name/status`；`args/result` 按 `unknown` 防御式处理。工具名和内部载荷可能变化。工具结果仅映射为 Harness 展示记录，不能交给 Harness 执行器再次执行。
 
-模型目录使用 `Cursor.models.list({ apiKey?, teamId? })`，响应包含模型 ID、名称、参数与变体。选择传给 Agent 的原始模型 ID 和参数；UI 合成的 route ID 不应直接传给 SDK。初始化尚未调用模型目录接口。
+模型目录使用 `Cursor.models.list({ apiKey?, teamId? })`，响应包含模型 ID、名称、参数与变体。选择传给 Agent 的原始模型 ID 和参数；UI 合成的 route ID 不应直接传给 SDK。当前 MVP 已实现动态目录接口，离线替身通过；真实账号目录请求尚未执行。
 
 来源：[流式接口](https://cursor.com/docs/sdk/typescript#streaming)、发布包 `messages.d.ts` 和模型类型声明。
 
@@ -75,6 +75,6 @@ agent[Symbol.asyncDispose](): Promise<void>;
 
 当前公开 SDK 没有程序化 `canUseTool`/hook 回调。Hooks 采用 `.cursor/hooks.json`。文档称 `request` 事件可表示用户输入/审批等待，但类型只提供请求标识，公开 Agent/Run 接口没有完整响应方法。因此本版本不能承诺 Harness 原生人工审批闭环。
 
-后续第一轮端到端验证应从受限只读工具开始，验证权限可执行后再加入写文件和 Shell。收到不支持的交互请求必须明确结束并报告，不能静默同意。初始化尚不创建或执行 Agent。
+后续第一轮端到端验证应从受限只读工具开始，验证权限可执行后再加入写文件和 Shell。收到不支持的交互请求必须明确结束并报告，不能静默同意。当前 MVP 已实现原生 Agent 创建与执行适配，自动测试使用离线 SDK 替身；真实计费运行尚未执行。
 
 来源：[Sandbox](https://cursor.com/docs/sdk/typescript#sandbox-options)、[Hooks](https://cursor.com/docs/hooks#pretooluse)。

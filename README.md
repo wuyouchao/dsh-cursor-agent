@@ -1,62 +1,50 @@
 # dsh-cursor-agent
 
-为 DeepSeek Harness 接入 Cursor 官方 SDK、账号登录与原生 Agent 能力。
+为 DeepSeek Harness 接入 Cursor 官方 SDK 的账号管理、动态模型目录与原生 Agent。
 
-**当前处于初始化阶段。** 已提供可由 Cordis 加载的插件入口、SDK 认证命令、开发检查和接口研究；尚不能在 Harness 界面中与 Cursor 对话。插件加载只输出诊断，不替换已有 Agent。
+`0.1.0` 提供专用 Cursor 模式：Cursor 执行 Agent 循环和实际工具，Harness 展示会话、流式文本与工具记录。工具事件只用于展示，不会在 Harness 再执行一次。
 
-## 接入方向
+## 能力与验证范围
 
-```text
-DeepSeek Harness Web UI
-  → Cursor AgentFactory 适配层（待开发）
-  → Cursor SDK 本地 Agent
-  → 本地工作区 + Cursor 云端模型
-```
+- 模型设置页提供 Cursor 登录链接、复制、取消、状态刷新和退出；凭据由官方 SDK 管理。
+- “连接成功”表示远端账号信息与模型目录验证成功。本机已保存凭据、远端连接成功和真实 Agent 对话是不同状态。
+- 注册独立 `cursor` 模型提供方，动态读取模型和变体，并把所选参数传给原生 Agent。
+- 文本多轮、增量展示、取消与会话恢复已有实现和离线验证。恢复必须具有匹配的 Cursor Agent、工作区、权限配置和 checkpoint；已有非 Cursor 会话不能伪恢复。
+- 默认工具策略为只读并启用 SDK 沙箱；可显式配置工作区写入或 Shell。SDK 的 Windows 沙箱实际执行仍需真实环境验收。
 
-目标是由 Cursor 执行 Agent 循环、文件编辑和工具调用，Harness 提供界面、会话列表与展示。事件桥接不再次执行已经由 Cursor 执行过的工具。
+本轮使用真实 Harness 服务与离线 SDK 替身验证集成。**尚未执行真实浏览器授权、账号模型请求、计费对话或 Desktop 实机安装验收。** 详细证据及尚未验证项目见 [验证记录](docs/verification.md)。
 
-这个方向依据[官方 Harness 插件接口](https://github.com/deepseek-ai/deepseek-harness/tree/687f282e8625c6b8d11ff58211a90524be2e4317/docs/user/develop)与 [Cursor TypeScript SDK](https://cursor.com/docs/sdk/typescript)核实，接口与接入方案见下方研究文档。
+## 安装到 Harness
 
-## 开发
+兼容目标：Node.js 24、Harness `0.2.1-rc.2`、Cordis `4.0.5`、Cursor SDK `1.0.40`。无需安装 Cursor 桌面应用或手动安装 SDK。
 
-使用 Node.js 24 和 npm。当前兼容目标为 Harness `0.2.1-rc.2`、Cordis `4.0.5`、Cursor SDK `1.0.40`。这里只表示研究与构建基线，尚未完成完整 Harness Web 集成验收。
+本版本会将对应 profile 切换为专用 Cursor 模式，停用默认 Agent loop、DeepSeek/Pi 模型提供方及与原生循环冲突的自动标题、计划与压缩任务，保留账号配置数据和模型设置页。建议使用专门的验证 profile。恢复原模式应卸载插件并重启 Harness；仅关闭宿主插件开关不会移除 bundle patch。
 
-```sh
-npm ci
-npm run check
-```
-
-`check` 执行类型检查、格式检查、离线测试和生产构建。默认测试不登录 Cursor、不调用模型。
-
-## 从 GitHub 安装
-
-兼容目标为 Harness `0.2.1-rc.2`。**无需安装 Cursor 桌面版，也无需手动安装 Cursor SDK**；包管理器会自动安装 `@cursor/sdk` 依赖。
-
-Desktop 用户在“添加插件”窗口填入：
+Desktop 的“添加插件”窗口可填写：
 
 ```text
 github:wuyouchao/dsh-cursor-agent#main
 ```
 
-点击安装，完成后启用插件。Desktop 使用独立的 `desktop` profile。
-
-使用命令行管理 Desktop 插件时，先完全退出 Desktop，再运行其自带的 `dsh`：
+建议将 `#main` 替换为本次交付的固定提交 SHA，避免安装到后续变更。命令行管理 Desktop 插件前先完全退出 Desktop：
 
 ```sh
 dsh plugin --profile desktop add github:wuyouchao/dsh-cursor-agent#main
 ```
 
-命令完成后重新打开 Desktop。Web 用户则需要 Node.js 24、Git、可用的 pnpm 和已有的 Web profile，执行：
+Web 用户将 `desktop` 替换为已有的 `web` profile。安装后重新启动对应实例，在模型设置页的 Cursor 卡片完成授权、刷新目录，再在新会话选择 Cursor 模型。
 
-```sh
-dsh plugin --profile web add github:wuyouchao/dsh-cursor-agent#main
-```
+Git 安装直接使用仓库中的 `dist/` 与 `lib/` 预编译产物，不执行 `prepare` 等安装构建脚本。若失败页面仍引用旧版本或 `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`，重新添加固定的新提交；旧任务的重试可能继续使用旧代码。
 
-从 `0.0.2` 起，仓库直接包含预编译的 `dist/`，不再在安装时执行 `prepare`，无需为本插件添加构建白名单。如果安装详情仍显示旧提交 `9b8aac4` 或 `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`，返回添加界面重新输入最新 Git 地址，或将 `#main` 换成修复后的提交 SHA；失败页面的“重试”可能继续使用旧的安装任务。
+## 使用与限制
 
-可把 `#main` 换成具体提交 SHA，固定安装的代码版本。安装后重启对应 Harness 实例。**本版本仅验证基础插件加载，尚未提供 Cursor 对话、模型选择器和界面登录按钮。**
+先在模型设置页连接 Cursor，选择目录中的模型，再新建会话。默认模型路由 `default` 由最新 Cursor 目录解析；独立 `maxTokens`、`reasoningEffort` 参数不映射为假支持，应使用目录提供的模型变体。
 
-安装到 Desktop profile 后，完全退出 Desktop，再通过以下命令使用认证工具。Web 用户把 `desktop` 替换为 `web`。
+目前仅支持文本输入。图片、分叉、Harness 子 Agent、steer/inject、人工审批响应和 Harness maintenance/压缩尚不支持，会明确拒绝。原生工具产生人工交互请求时运行会终止。取消会等待原生运行确认终态；超过本地收尾时限则该 Agent 停止接收新消息，避免与尚未结束的运行重叠。
+
+会话映射默认保存在对应 profile 目录的 `cursor-agent/` 下；独立组合无 profile 时使用 `~/.dsh/cursor-agent/<工作目录摘要>/`。映射不含账号凭据。可通过插件 `stateDirectory` 指定位置。
+
+账号 CLI 仍可使用，Desktop 用户应先退出 Desktop，Web 用户替换 profile 名称：
 
 ```sh
 dsh plugin --profile desktop exec dsh-cursor-agent-auth login
@@ -64,52 +52,34 @@ dsh plugin --profile desktop exec dsh-cursor-agent-auth status
 dsh plugin --profile desktop exec dsh-cursor-agent-auth logout
 ```
 
-安装机制参见[官方 GitHub 安装说明](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/docs/user/develop/basic/publish.md#installing-from-github-the-build-script-catch)。
+CLI `status` 仅查询 SDK 本机保存状态，不验证远端密钥。`CURSOR_API_KEY` 优先于保存的登录；退出只清除 SDK 保存的凭据，不撤销远端 Key、不修改环境变量。插件不读取私有凭据文件结构，不把 Key 写入日志、会话或客户端响应。
 
-## Cursor 登录
-
-在源码目录完成 `npm ci` 后，也可以运行以下命令。修改源码后先执行 `npm run build` 更新已提交的编译产物。
+## 开发和打包
 
 ```sh
-npm run login
-npm run auth:status
-npm run logout
-```
-
-登录使用官方 SDK 的浏览器流程，支持 Ctrl+C 取消。CLI 只展示账号及过期信息，不输出 API Key。
-
-- SDK 默认保存登录到 `~/.cursor/sdk/auth.json`，不自动继承 Cursor 桌面端登录。
-- `auth:status` 查询 **SDK 保存的登录状态**，不代表远端密钥有效，也不反映 `CURSOR_API_KEY`。
-- `logout` 清除 SDK 保存的凭据，不撤销远端 Key，也不修改环境变量。
-- 也可自行设置 `CURSOR_API_KEY`；`.env.example` 仅作参考，命令不会自动读取 `.env`。
-
-这些命令是初始化提供的认证工具，不代表已经接通 Harness 中的登录按钮或 Agent 运行。
-
-## 本地打包
-
-```sh
-npm run build
+npm ci
+npm run check
 npm pack
 ```
 
-生成的 `.tgz` 包含编译产物和 `cordis.patch.yml`。如需在已有、可用的 Harness `web` profile 验证加载，可执行：
+`check` 包含 Typert 契约生成、严格类型、格式、离线测试与生产构建。默认测试不登录、不调用付费模型。修改源码后必须同步构建并提交 `dist/` 与生成的 `lib/`；不要添加安装生命周期构建脚本。
+
+本地包可在专用 profile 中验收：
 
 ```sh
-dsh plugin --profile web add ./dsh-cursor-agent-0.0.2.tgz
+dsh plugin --profile web add ./dsh-cursor-agent-0.1.0.tgz
 ```
 
-这会修改该 profile。重启相应 Harness 实例后，入口只记录“桥接尚未启用”。初次创建 profile 不会自动得到 Web UI，需遵循官方 profile 初始化流程。当前没有发布 npm 包，`private: true` 用于阻止误发布。
+此命令会修改指定 profile，应由用户自行在验证环境执行。项目未发布 npm 包，`private: true` 防止误发布。
 
-## 研究和计划
+## 设计与证据
 
-- [Harness 插件开发接口](docs/research/deepseek-harness.md)
-- [Cursor SDK 接口与认证](docs/research/cursor-sdk.md)
-- [接入架构与分阶段验收](docs/architecture.md)
-
-## 当前边界
-
-原生 AgentFactory、动态模型目录、会话恢复、事件转换、界面登录和权限策略均待实现。Cursor 的工具事件不能直接视为 Harness 审批回调；Windows SDK 包存在，但本机沙箱执行及真实账号调用仍待实测。
+- [Harness 接口研究](docs/research/deepseek-harness.md)
+- [Cursor SDK 研究](docs/research/cursor-sdk.md)
+- [架构](docs/architecture.md)
+- [实施计划](docs/implementation-plan.md)
+- [验证步骤与记录](docs/verification.md)
 
 ## 许可证
 
-本项目代码采用 [MIT](LICENSE)；许可证保留标准英文原文。Cursor SDK 使用其自身许可与服务条款。本项目为独立社区项目，与 Cursor、DeepSeek 官方无隶属关系。
+本项目采用 [MIT](LICENSE)。Cursor SDK 使用其自身许可与服务条款。本项目为独立社区项目，与 Cursor、DeepSeek 官方无隶属关系。
