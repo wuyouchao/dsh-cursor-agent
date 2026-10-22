@@ -1,0 +1,4 @@
+# 初始化版本只加载宿主入口，不替换现有 AgentFactory。
+- insert:
+    - id: dsh-cursor-agent
+      name: dsh-cursor-agent

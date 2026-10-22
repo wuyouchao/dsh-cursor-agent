@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+*.tgz
+.env
+.env.*
+!.env.example
+.cursor/sdk/
+.dsh/
+.local/
+*.log
+.DS_Store
+Thumbs.db

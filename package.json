@@ -1,0 +1,72 @@
+{
+  "name": "dsh-cursor-agent",
+  "version": "0.0.1",
+  "private": true,
+  "description": "面向 DeepSeek Harness 的 Cursor 原生 Agent 集成插件（初始化阶段）",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0",
+    "dsh": "0.2.1-rc.2"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./auth": {
+      "types": "./dist/cursor/auth.d.ts",
+      "default": "./dist/cursor/auth.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wuyouchao/dsh-cursor-agent.git"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "cursor",
+    "agent"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm run format:check && npm test && npm run build",
+    "login": "tsx src/cli.ts login",
+    "auth:status": "tsx src/cli.ts status",
+    "logout": "tsx src/cli.ts logout",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@cursor/sdk": "1.0.40"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.5"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.0.5",
+    "@types/node": "24.19.2",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
+  }
+}
