@@ -2,9 +2,11 @@
 import { createCursorAuth } from "./cursor/auth.js";
 
 const HELP = `Cursor SDK 认证命令：
-  npm run login        使用浏览器登录 Cursor，保存 SDK 凭据
-  npm run auth:status  查看 SDK 保存的登录状态
-  npm run logout       清除 SDK 保存的登录
+  dsh-cursor-agent-auth login   使用浏览器登录 Cursor，保存 SDK 凭据
+  dsh-cursor-agent-auth status  查看 SDK 保存的登录状态
+  dsh-cursor-agent-auth logout  清除 SDK 保存的登录
+
+在源码目录也可使用 npm run login / npm run auth:status / npm run logout。
 
 凭据由官方 SDK 保存在 ~/.cursor/sdk/auth.json，不读取 Cursor 桌面账号登录。
 状态检查不验证远端有效性，也不检查 CURSOR_API_KEY 环境变量。`;

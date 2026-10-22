@@ -28,7 +28,36 @@ npm run check
 
 `check` 执行类型检查、格式检查、离线测试和生产构建。默认测试不登录 Cursor、不调用模型。
 
+## 从 GitHub 安装
+
+需要 Node.js 24、Git、可用的 pnpm，以及已有的 Harness `0.2.1-rc.2` Web profile。**无需安装 Cursor 桌面版，也无需手动安装 Cursor SDK**；包管理器会自动安装 `@cursor/sdk` 依赖。
+
+```sh
+dsh plugin --profile web add github:wuyouchao/dsh-cursor-agent#main
+```
+
+仓库中的 `prepare` 脚本会在 Git 安装时编译入口。若 pnpm 提示不允许构建，在该 profile 的 `pnpm-workspace.yaml` 中合并以下配置，然后重试安装。默认位置为 `~/.dsh/profiles/web/pnpm-workspace.yaml`，设置了 `DSH_HOME` 时以实际目录为准。保留文件原有内容；若 pnpm 输出的包标识不同，以其提示为准。
+
+```yaml
+allowBuilds:
+  dsh-cursor-agent: true
+```
+
+可把 `#main` 换成具体提交 SHA，固定安装的代码版本。安装后重启对应 Harness 实例。**本版本仅验证基础插件加载，尚未提供 Cursor 对话、模型选择器和界面登录按钮。**
+
+安装到 profile 后，可通过以下命令使用认证工具：
+
+```sh
+dsh plugin --profile web exec dsh-cursor-agent-auth login
+dsh plugin --profile web exec dsh-cursor-agent-auth status
+dsh plugin --profile web exec dsh-cursor-agent-auth logout
+```
+
+安装机制参见[官方 GitHub 安装说明](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/docs/user/develop/basic/publish.md#installing-from-github-the-build-script-catch)。
+
 ## Cursor 登录
+
+在源码目录完成 `npm ci` 后，也可以运行以下命令。若本机全局禁用了安装脚本，先手动执行 `npm run build` 生成入口。
 
 ```sh
 npm run login
@@ -57,7 +86,7 @@ npm pack
 dsh plugin --profile web add ./dsh-cursor-agent-0.0.1.tgz
 ```
 
-这会修改该 profile；本次初始化没有执行。重启相应 Harness 实例后，入口只记录“桥接尚未启用”。初次创建 profile 不会自动得到 Web UI，需遵循官方 profile 初始化流程。当前没有发布 npm 包，`private: true` 用于阻止误发布。
+这会修改该 profile。重启相应 Harness 实例后，入口只记录“桥接尚未启用”。初次创建 profile 不会自动得到 Web UI，需遵循官方 profile 初始化流程。当前没有发布 npm 包，`private: true` 用于阻止误发布。
 
 ## 研究和计划
 

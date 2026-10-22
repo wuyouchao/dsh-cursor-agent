@@ -11,6 +11,9 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "dsh-cursor-agent-auth": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -51,10 +54,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm run format:check && npm test && npm run build",
-    "login": "tsx src/cli.ts login",
-    "auth:status": "tsx src/cli.ts status",
-    "logout": "tsx src/cli.ts logout",
-    "prepack": "npm run build"
+    "login": "node dist/cli.js login",
+    "auth:status": "node dist/cli.js status",
+    "logout": "node dist/cli.js logout",
+    "prepare": "npm run build"
   },
   "dependencies": {
     "@cursor/sdk": "1.0.40"
