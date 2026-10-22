@@ -98,3 +98,20 @@ TypeError [ValidationError]: invalid config:
 修复后的定向命令 `node --import tsx --test --test-name-pattern '生产.*入口真实依赖配置路径' test/runtime-factory.test.ts` 为 **10/10通过**；`npx tsc --noEmit` 与测试文件格式检查通过。此处使用真实 Harness 生命周期与配置校验，未调用 SDK 认证、模型或Agent，也未修改用户 profile。最终全量检查、0.1.1包安装和用户Desktop再次启用结果须各自记录，不能从这10项通过推断真实授权或计费运行成功。
 
 0.1.1 最终全量检查：构建任务执行 npm run check，65/65测试通过，类型、格式与生产构建均通过（包含上述10项生产入口配置矩阵）。此结果修正了0.1.0省略配置的覆盖缺口；尚待用户Desktop重新启用验证。
+
+## A10：0.1.0 原地升级至版本标签 v0.1.1
+
+2026-10-22 在新的仓库外隔离目录 `I:/dsh-cursor-agent-install-temp/upgrade-3851276dc00d4ea7a361207f17b4f515` 验证，无祖先 node_modules，NODE_PATH清空。没有变更之前的证据fixture或用户profile。使用 Desktop Node `24.21.0`、pnpm `11.28.5`，升级profile保持 `nodeLinker: hoisted`、`autoInstallPeers: false`、`allowBuilds: {}`、`ignoreScripts: false`，初始使用全新store。
+
+实际调用与官方CLI相同的 `@deepseek-ai/dsh-plugin-manager/operations` 公共 `runProfilePnpm`，不是仅模拟pnpm。Desktop的该JS模块位于app.asar而非可直接导入的unpacked目录，因此在独立工具fixture安装了精确官方 `@deepseek-ai/dsh-plugin-manager@0.2.1-rc.2`，以明确的 `context.dir` 指向临时profile、`context.home` 指向临时home，执行真实兼容性校验与bundle选择reconcile。
+
+依次执行以下参数，过程中没有remove或卸载操作：
+
+```text
+runProfilePnpm(context, ["add", "github:wuyouchao/dsh-cursor-agent#641885d41a0dfeefc20ae294e0d4dded4cc65220", "--store-dir=<fixture>/profile-store", "--reporter=append-only"], options)
+runProfilePnpm(context, ["add", "github:wuyouchao/dsh-cursor-agent#v0.1.1", "--store-dir=<fixture>/profile-store", "--reporter=append-only"], options)
+```
+
+两次退出码均为0，分别安装0.1.0和原地更新为0.1.1；pnpm锁文件把 `v0.1.1` 解析到代码提交 [3d09c484b64d8c890d40685c3bb3850dd3db77f7](https://github.com/wuyouchao/dsh-cursor-agent/commit/3d09c484b64d8c890d40685c3bb3850dd3db77f7)。原有bundle选择 `[fixture-base, dsh-cursor-agent]`、profile自定义字段、无关偏好和 `cordis.patch.yml` 字节均保留。新版本根入口、auth、typert、remote导入通过；`Config.parse(undefined)` 得到只读权限与启用沙箱，显式shell/false配置保持原值。未调用账号认证、模型或Agent。
+
+执行脚本为fixture的 `tooling/upgrade.mjs`，所有原生stdout/stderr经 `2>&1 | Tee-Object` 保存至 `upgrade-output.txt`；官方操作另各自产生 `profile/.plugin-manager/logs/operation-*/pnpm.log`。这证明官方包管理公共操作支持无需卸载的原地升级；不等同于用户Desktop GUI再次启用或真实授权通过。修复代码的 [GitHub Actions run 39740793448](https://github.com/wuyouchao/dsh-cursor-agent/actions/runs/39740793448) 的Windows和Linux检查均成功。

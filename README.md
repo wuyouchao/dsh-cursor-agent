@@ -23,20 +23,20 @@
 Desktop 的“添加插件”窗口可填写：
 
 ```text
-github:wuyouchao/dsh-cursor-agent#main
+github:wuyouchao/dsh-cursor-agent#v0.1.1
 ```
 
-建议将 `#main` 替换为本次交付的固定提交 SHA，避免安装到后续变更。命令行管理 Desktop 插件前先完全退出 Desktop：
+推荐使用已发布的版本标签 `v0.1.1`，也可使用对应的固定提交 SHA。以后升级时改为新版本标签或新固定 SHA。命令行管理 Desktop 插件前先完全退出 Desktop：
 
 ```sh
-dsh plugin --profile desktop add github:wuyouchao/dsh-cursor-agent#main
+dsh plugin --profile desktop add github:wuyouchao/dsh-cursor-agent#v0.1.1
 ```
 
 Web 用户将 `desktop` 替换为已有的 `web` profile。安装后重新启动对应实例，在模型设置页的 Cursor 卡片完成授权、刷新目录，再在新会话选择 Cursor 模型。
 
 Git 安装直接使用仓库中的 `dist/` 与 `lib/` 预编译产物，不执行 `prepare` 等安装构建脚本。若失败页面仍引用旧版本或 `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`，重新添加固定的新提交；旧任务的重试可能继续使用旧代码。
 
-升级无需先卸载：完全退出 Desktop，使用上面的同一条 `dsh plugin --profile desktop add` 命令，将 Git 地址改为新版本的固定 SHA，完成后重启 Desktop。第三方插件在 GUI 中暂不提供更新操作，可使用此命令原地升级。
+升级无需先卸载：完全退出 Desktop，使用上面的同一条 `dsh plugin --profile desktop add` 命令，将 Git 地址改为新版本标签或固定 SHA，完成后重启 Desktop。第三方插件在 GUI 中暂不提供更新操作，可使用此命令原地升级。
 
 `0.1.1` 修复了 `0.1.0` 在 Desktop 启用时因未提供插件配置而出现的 `invalid config: expected object, received undefined`。配置省略时会应用只读权限与启用沙箱的默认值；遇到该错误请升级到包含此修复的固定提交并重启 Harness。
 
