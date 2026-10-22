@@ -1,8 +1,8 @@
 # 项目约定
 
 - 使用中文回答用户问题、编写文档及面向用户的提示。
-- 当前是 Cursor 独立任务域 v0.2.0 阶段，保留宿主官方聊天、模型与 Agent 循环。以 `docs/research/` 的接口研究和 `docs/architecture.md` 为实现依据。
-- 保留 Cursor 原生 Agent 执行流程；工具事件仅用于展示，不在 Harness 再执行同一个工具。
+- 当前是 Cursor LlmAdapter v0.3.0 阶段，在普通工作区与会话的模型菜单选择 Cursor，保留官方 AgentLoop、工作区、历史、工具和审批。以 `docs/research/` 的接口研究和 `docs/architecture.md` 为实现依据。
+- Cursor SDK 只推理和提出 customTools 请求；callback 只排队，确认 SDK run 停止后才交给 Harness 执行工具。每个 Harness step 新建 SDK Agent，以完整 Host transcript 为权威，禁止 SDK 原生工具旁路。
 - 未核实的接口不要用占位成功结果实现；明确区分已实现、已查证和未实测。
 - Cursor 凭据由官方 SDK 管理，不读取其私有凭据文件结构，不把 API Key 写入日志、会话或客户端响应。
 - Harness 依赖按已验证的完整版本锁定，不依赖可能滞后的 `latest` 标签。

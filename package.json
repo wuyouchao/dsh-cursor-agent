@@ -1,8 +1,8 @@
 {
   "name": "dsh-cursor-agent",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "DeepSeek Harness 的 Cursor 原生 Agent 与账号管理插件",
+  "description": "DeepSeek Harness 的 Cursor 模型适配器与账号管理插件",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -39,10 +39,6 @@
     "./shared/account": {
       "types": "./dist/shared/account.d.ts",
       "default": "./dist/shared/account.js"
-    },
-    "./shared/tasks": {
-      "types": "./dist/shared/tasks.d.ts",
-      "default": "./dist/shared/tasks.js"
     }
   },
   "files": [
@@ -69,9 +65,7 @@
       "platform": "web",
       "inject": [
         "@deepseek-ai/dsh-api-remotes",
-        "@deepseek-ai/dsh-client-ui-settings",
-        "@deepseek-ai/dsh-client-ui-layout",
-        "@deepseek-ai/dsh-client-ui-sidebar"
+        "@deepseek-ai/dsh-client-ui-settings"
       ]
     }
   },
@@ -111,8 +105,7 @@
     "@deepseek-ai/dsh-typert-protocol": "0.2.1-rc.2",
     "@deepseek-ai/dsh-typert-registry": "0.2.1-rc.2",
     "@deepseek-ai/dsh-workspace": "0.2.1-rc.2",
-    "@deepseek-ai/dsh-client-ui-layout": "0.2.1-rc.2",
-    "@deepseek-ai/dsh-client-ui-sidebar": "0.2.1-rc.2"
+    "@deepseek-ai/dsh-working-directory": "0.2.1-rc.2"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.5",
@@ -120,6 +113,8 @@
     "@deepseek-ai/cordis-plugin-include": "1.0.10",
     "@deepseek-ai/cordis-plugin-loader": "1.0.6",
     "@deepseek-ai/dsh-agent": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-agent-loop": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-agent-loop-testkit": "0.2.1-rc.2",
     "@deepseek-ai/dsh-agent-preset-registry": "0.2.1-rc.2",
     "@deepseek-ai/dsh-api-gateway": "0.2.1-rc.2",
     "@deepseek-ai/dsh-api-remotes": "0.2.1-rc.2",

@@ -74,7 +74,7 @@ export function CursorAccountCard({
       {state?.email && (
         <p style={{ margin: 0, overflowWrap: "anywhere" }}>{state.email}</p>
       )}
-      <p style={secondary}>使用 Cursor 账号登录，查看可用模型。</p>
+      <p style={secondary}>登录后，在普通聊天的模型菜单中选择 Cursor 模型。</p>
       {state?.credentialSource === "environment" && (
         <p style={secondary}>
           当前使用 CURSOR_API_KEY

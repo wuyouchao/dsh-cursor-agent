@@ -10,6 +10,16 @@ export interface AccountModel {
             displayName?: string;
         }[];
     }[];
+    variants?: {
+        params: {
+            id: string;
+            value: string;
+        }[];
+        displayName: string;
+        description?: string;
+        isDefault?: boolean;
+        isMaxMode?: boolean;
+    }[];
 }
 export interface AccountState {
     status: "signed-out" | "waiting" | "verifying" | "connected" | "error";

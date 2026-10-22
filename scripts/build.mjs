@@ -1,7 +1,16 @@
 import "./build-typert.mjs";
 import { execFileSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
 import { build } from "esbuild";
+// 只清理已撤销公共功能的明确文件，保留历史运行模块及用户磁盘数据。
+for (const stem of [
+  "dist/client/CursorTasksPage",
+  "dist/client/tasks-store",
+  "dist/host/task-service",
+]) {
+  for (const suffix of [".js", ".js.map", ".d.ts", ".d.ts.map"])
+    await rm(`${stem}${suffix}`, { force: true });
+}
 execFileSync(
   process.execPath,
   ["node_modules/typescript/bin/tsc", "-p", "tsconfig.build.json"],

@@ -1,10 +1,10 @@
-# 验证记录：0.1.x 历史与 0.2.0 独立任务
+# 验证记录：历史方案与 0.3.0 官方聊天模型适配
 
-当前 0.2.0 使用独立 Cursor 账号与任务运行域，bundle patch 仅插入本插件，不再停用官方 Agent、模型或预设。下方 A1–A10 及 0.1.1 节是历史发布验收，专用 profile 与全局 factory 的描述不代表当前设计；当前新增证据见末尾 Host 共享模块与预设作用域回归。
+当前 0.3.0 通过真正 LlmAdapter 加入官方会话模型菜单；Cursor SDK 只负责模型推理和声明自定义工具请求，Harness 保持唯一工具执行与审批。下方0.1.x专用模式、0.2独立任务是历史方案，不能当作当前设计。当前证据见末尾0.3.0官方AgentLoop模型集成回归。
 
 本记录区分离线自动验证和真实环境验收。未填写证据的项目一律视为待完成；编译通过不代表真实账号、Desktop 或计费对话成功。
 
-## 自动验证清单
+## 历史自动验证清单（0.1.0）
 
 | 编号 | 验证步骤与断言                                                                                                                                                                                    | 状态/证据                                                                                                                                       |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -143,3 +143,40 @@ runProfilePnpm(context, ["add", "github:wuyouchao/dsh-cursor-agent#v0.1.1", "--s
 同一隔离 fixture 进一步使用官方 `runProfilePnpm` 安装固定 Git 提交 `2acac0b96178c3b471fa0d82e93f963860fdcacc`，退出码 0，版本为 0.2.0，锁文件解析到该 SHA，没有 prepare 审批阻断；安全安装策略、bundle 与无关配置保留。Git 安装后的完整入口再次经官方解析器激活，账号及任务就绪，已有 adapter/factory 保持不变。独立日志为 `git-install-output.txt` 与 `git-full-resolver-output.txt`，未覆盖此前 tgz 验证日志。该代码提交之后仅修正跨平台测试路径并补充文档，生产源码及编译产物不变。
 
 本次未修改用户真实 profile，未执行浏览器授权、真实账号目录请求、付费对话或 SDK Windows 沙箱实测。新建未发送的任务没有有效 checkpoint 时，重启后显示“不可继续”；恢复检查不会创建空 Agent 冒充成功。
+
+## 0.3.0 官方 AgentLoop 模型集成回归
+
+`test/model-integration.test.ts` 使用真实官方 `AgentLoop`、`LlmRuntime`、Session/Tools/SystemPrompt 服务、本地文件系统与 WorkingDirectory，并采用官方 `installModelSelection` 会话路由机制。宿主原有提供方与Cursor网络均由离线替身替代，生产 `CursorLlmAdapter` 和 `resolveAdapterContext` 本身参加测试。
+
+定向命令 `node --import tsx --test test/model-integration.test.ts` 为 **9/9通过**，覆盖：
+
+- 同一官方Agent在宿主提供方→Cursor→宿主提供方→Cursor间切换；宿主Agent身份与会话不变，最后一次Cursor请求携带所有中间用户/助手历史。每个Cursor step新建并释放SDK Agent。
+- 通过真实WorkingDirectory服务更改工作目录后，生产resolver取得当前目录并传入SDK；不使用进程目录或模型文本中的路径。
+- SDK customTools callback仅排队并被拒绝；SDK cancel返回但wait未确认终态时Harness仍零次执行。确认停止后，Harness审批和工具body各一次，真实工具结果进入下一Cursor step完整上下文。
+- Harness审批明确拒绝时工具body零次执行，拒绝结果进入下一步；SDK callback无法绕过宿主审批。
+- 用户取消与SDK停止确认超时均fail closed，不向Harness提交工具调用；超时记录错误，不宣称原生运行已确认停止。
+- Cursor adapter卸载后宿主提供方继续对话，原官方factory仍能创建另一个Agent。
+- 缺失sessionId、未知会话及会话目录变为文件时，生产cwd resolver拒绝请求，SDK Agent创建次数均为零。
+
+以上证明真实官方聊天运行时的模型适配契约，不等于浏览器模型菜单点击、真实账号模型能力、付费推理或Desktop完整流程已实测。共享scope/预设的真实双依赖树回归仍保留；最终全量检查、产物和隔离安装以集成任务最后记录为准。
+
+## 0.3.0 最终集成与隔离升级验收
+
+最终 `npm run check` 全部通过：Typert 契约生成、严格类型、格式、生产构建和 **107/107** 离线测试，0失败。包含当前真正模型Adapter/官方AgentLoop回归以及历史内部运行模块兼容回归；并非107次真实模型调用。完整stdout/stderr已显式保存到 `.local/pack-check/v0.3.0-check-output.txt`。账号缓存与目录通知投影一致，验证态清空、相同目录回连恢复及variant变动均有回归。
+
+在仓库外新的 `I:/dsh-cursor-agent-install-temp/v030-final-c52f35f9a43149c6af274f635cd7a2f9` 中，以Desktop Node `24.21.0`、pnpm `11.28.5` 和全新store，通过精确官方 `@deepseek-ai/dsh-plugin-manager@0.2.1-rc.2` 的公共 `runProfilePnpm` 执行旧0.2.0固定提交 `2acac0b96178c3b471fa0d82e93f963860fdcacc` → 本地0.3.0预编译tgz的原地add；两次退出码均为0。
+
+升级profile保持 `nodeLinker: hoisted`、`autoInstallPeers: false`、`allowBuilds: {}`、`ignoreScripts: false`，NODE_PATH清除，无祖先node_modules。未放宽脚本审批、未运行prepare构建、未安装Host peer到profile；pnpm报告缺失Host peers属于预期，不能用裸Node导入或零peer警告代替真实Host解析。升级后Host模块与Cordis无profile物理副本，既有 `fixture-base` 与插件bundle选择、无关sentinel、合成旧任务数据文件均保留。
+
+安装验证再使用真实官方 `createRuntimeResolution`/`PluginPackages`，以仓库内精确官方依赖作为installation anchor，动态导入已安装的生产包。挂载真实SessionStore、AgentRegistry、LlmRuntime、SessionProjectionRegistry、SystemPrompt、LocalFileSystem与WorkingDirectory；确认下列事实：
+
+- scope/agent模块身份与installation严格相同，跨边界scope标签可读。
+- 生产插件真正ACTIVE，账号服务与Cursor LLM路由均ready，不能只以账号服务出现视为模型已启用。
+- 未登录的空模型cache在一秒上限内直接返回，不调用SDK账号或模型网络接口，也不阻塞官方目录。
+- 已有官方adapter/factory与WorkingDirectory服务保持原样；不再注册cursorTasks服务。
+- 卸载只移除Cursor账号与模型路由，官方提供方与factory保留。
+- 已安装包不含旧Cursor任务UI及Host TaskService公共产物，旧磁盘任务数据不删除。
+
+升级原生输出显式保存在fixture的 `upgrade-output.txt`，完整Host解析激活输出保存在 `full-resolver-output.txt`；验证脚本为 `.local/pack-check/verify-v030-resolver.mjs`。该次代码验收tgz的SHA256为 `3D3415ADBB7E45492327649FF4BE7D126EB3150F1FF054BB1057AB4417C28E74`；此摘要只对应该次包字节，后续文档收口会改变包摘要。远端固定提交Git安装在发布流程中单独记录本机日志和最终交付信息，不以本地tgz结果推断通过。
+
+以上为隔离Host与SDK替身验收，不是用户Desktop完整GUI、真实浏览器授权、账号实际模型能力或付费推理实测；未操作用户真实profile、未登录、未发出付费模型请求。

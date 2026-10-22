@@ -1,0 +1,1 @@
+{"version":3,"file":"errors.js","sourceRoot":"","sources":["../../src/adapter/errors.ts"],"names":[],"mappings":"AAAA,2CAA2C;AAC3C,MAAM,OAAO,iBAAkB,SAAQ,KAAK;CAAG","sourcesContent":["/** 仅供适配器和可信宿主边界构造；SDK 原始错误不属于可向用户展示的消息。 */\nexport class AdapterInputError extends Error {}\n"]}

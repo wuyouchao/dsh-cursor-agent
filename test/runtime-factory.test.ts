@@ -465,6 +465,17 @@ test("send挂起取消可whenIdle，迟到run被取消且同一Agent可下一轮
   }
 });
 
+async function mountWorkingDirectory(ctx: Context, root: string) {
+  const { default: FileSystem } = await import("@deepseek-ai/dsh-fs-local");
+  const { default: SystemPrompt } =
+    await import("@deepseek-ai/dsh-system-prompt");
+  const { default: WorkingDirectory } =
+    await import("@deepseek-ai/dsh-working-directory");
+  await ctx.plugin(FileSystem, {});
+  await ctx.plugin(SystemPrompt, {});
+  await ctx.plugin(WorkingDirectory, { defaultDirectory: root });
+}
+
 function keepOfficialHost(ctx: Context) {
   class OfficialAdapter extends LlmAdapter {
     override providerInfo(provider: string) {
@@ -495,7 +506,11 @@ function keepOfficialHost(ctx: Context) {
   );
   const before = ctx.llm.listProviders();
   return () => {
-    assert.deepEqual(ctx.llm.listProviders(), before, "官方模型目录不得改变");
+    assert.deepEqual(
+      ctx.llm.listProviders().filter((provider) => provider.id !== "cursor"),
+      before,
+      "已有官方模型目录不得改变",
+    );
     assert.throws(
       () =>
         ctx.agents.setFactory({
@@ -512,7 +527,7 @@ function keepOfficialHost(ctx: Context) {
   };
 }
 
-test("完整入口注册独立账号与任务，保留官方模型及factory，卸载撤销自有服务", async () => {
+test("完整入口注册Cursor模型与账号，保留官方模型及factory，卸载撤销自有服务", async () => {
   const { default: LlmRuntime } = await import("@deepseek-ai/dsh-llm");
   const { default: ProjectionRegistry } =
     await import("@deepseek-ai/dsh-session-projection");
@@ -528,17 +543,23 @@ test("完整入口注册独立账号与任务，保留官方模型及factory，�
     await ctx.plugin(TypertRegistry);
     await ctx.plugin(LlmRuntime);
     await ctx.plugin(ProjectionRegistry);
+    await mountWorkingDirectory(ctx, root);
     const unchanged = keepOfficialHost(ctx);
-    const fiber = ctx.plugin(plugin, { stateDirectory: root });
+    const fiber = ctx.plugin(plugin, {});
     await fiber;
     assert.equal(fiber.state, 2);
     assert.equal(ctx.cursorAccount.getState().status, "signed-out");
-    assert.deepEqual(await ctx.cursorTasks.listTasks(), []);
+    assert.ok(
+      ctx.llm.listProviders().some((provider) => provider.id === "cursor"),
+    );
     unchanged();
     await fiber.dispose();
     unchanged();
     assert.throws(() => ctx.cursorAccount.getState());
-    assert.throws(() => ctx.cursorTasks.listTasks());
+    assert.equal(
+      ctx.llm.listProviders().some((provider) => provider.id === "cursor"),
+      false,
+    );
   } finally {
     await ctx.fiber.dispose();
     await rm(root, { recursive: true, force: true });
@@ -740,10 +761,12 @@ for (const face of ["source", "dist"] as const) {
     "omitted",
     "patch",
     "empty",
-    "explicit",
-    "invalid",
+    "legacy",
+    "null",
+    "array",
+    "string",
   ] as const) {
-    test(`生产${face}入口真实依赖配置路径：${mode}`, async () => {
+    test(`生产${face}官方模型入口配置路径：${mode}`, async () => {
       const { default: LlmRuntime } = await import("@deepseek-ai/dsh-llm");
       const { default: ProjectionRegistry } =
         await import("@deepseek-ai/dsh-session-projection");
@@ -753,7 +776,7 @@ for (const face of ["source", "dist"] as const) {
         face === "source"
           ? (await import("../src/index.js")).default
           : (await import("../dist/index.js")).default;
-      const root = await mkdtemp(join(tmpdir(), "cursor-config-load-"));
+      const root = await mkdtemp(join(tmpdir(), "cursor-model-config-"));
       const ctx = new Context();
       try {
         await ctx.plugin(SessionStore);
@@ -762,7 +785,7 @@ for (const face of ["source", "dist"] as const) {
         await ctx.plugin(TypertRegistry);
         await ctx.plugin(LlmRuntime);
         await ctx.plugin(ProjectionRegistry);
-        ctx.reflect.provide("profileContext", { dir: root });
+        await mountWorkingDirectory(ctx, root);
         const unchanged = keepOfficialHost(ctx);
         let config: unknown;
         if (mode === "patch") {
@@ -775,59 +798,49 @@ for (const face of ["source", "dist"] as const) {
               "utf8",
             ),
           ) as Parameters<typeof composeEntries>[0][number];
-          const entry = composeEntries([layers]).find(
+          config = composeEntries([layers]).find(
             (row) => row.id === "dsh-cursor-agent",
-          );
-          assert.ok(entry, "取实际bundle patch产生的插件entry");
-          config = entry.config;
+          )?.config;
         } else if (mode === "empty") config = {};
-        else if (mode === "explicit")
+        else if (mode === "legacy")
           config = {
             stateDirectory: root,
             permissionMode: "shell",
             sandboxEnabled: false,
           };
-        else if (mode === "invalid")
-          config = { permissionMode: 123, sandboxEnabled: "false" };
+        else if (mode === "null") config = null;
+        else if (mode === "array") config = [];
+        else if (mode === "string") config = "invalid";
         const fiber =
           mode === "omitted"
             ? ctx.plugin(plugin)
             : ctx.plugin(plugin, config as Parameters<typeof plugin.apply>[1]);
-        if (mode === "invalid") {
-          await assert.rejects(
-            fiber.await(),
-            /permissionMode|sandboxEnabled|Invalid|Expected/i,
-          );
-          assert.equal(fiber.state, 3, "真实FAILED状态，未启动apply");
+        if (["null", "array", "string"].includes(mode)) {
+          await assert.rejects(fiber.await(), /Invalid|Expected|object/i);
+          assert.equal(fiber.state, 3);
+          assert.throws(() => ctx.cursorAccount.getState());
           assert.equal(
             ctx.llm
               .listProviders()
               .some((provider) => provider.id === "cursor"),
             false,
           );
-          assert.throws(() => ctx.cursorAccount.getState());
-          unchanged();
         } else {
           await fiber.await();
-          assert.equal(
-            fiber.state,
-            2,
-            "必须真正ACTIVE，不能仅依赖assertActive",
-          );
+          assert.equal(fiber.state, 2);
           assert.equal(ctx.cursorAccount.getState().status, "signed-out");
-          assert.deepEqual(await ctx.cursorTasks.listTasks(), []);
-          unchanged();
-          assert.equal(
-            fiber.config.permissionMode,
-            mode === "explicit" ? "shell" : "readonly",
+          assert.ok(
+            ctx.llm
+              .listProviders()
+              .some((provider) => provider.id === "cursor"),
           );
-          assert.equal(
-            fiber.config.sandboxEnabled,
-            mode === "explicit" ? false : true,
+          assert.deepEqual(
+            fiber.config,
+            {},
+            "旧原生运行字段升级时忽略，不改变Harness工具权限",
           );
-          if (mode === "explicit")
-            assert.equal(fiber.config.stateDirectory, root);
         }
+        unchanged();
         await fiber.dispose();
         unchanged();
         assert.equal(

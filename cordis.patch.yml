@@ -1,4 +1,4 @@
-# Cursor 账号与任务独立运行，不修改宿主官方模型、Agent 或预设。
+# 只添加 Cursor 模型适配器和账号设置，不修改官方模型、聊天或预设。
 - insert:
     - id: dsh-cursor-agent
       name: dsh-cursor-agent

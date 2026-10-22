@@ -6,7 +6,6 @@ import type {
   TypertRemoteMethod,
 } from '@deepseek-ai/dsh-typert-protocol'
 import type { AccountState } from 'dsh-cursor-agent/shared/account'
-import type { CreateTaskInput, TaskModel, TaskState, TaskSummary } from 'dsh-cursor-agent/shared/tasks'
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteNamespace$637572736f724163636f756e74 {
@@ -17,16 +16,6 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     startLogin: () => Promise<RemoteResult<AccountState>>
     watch: (signal?: AbortSignal) => RemoteStreamHandle<AccountState, never>
   }
-  interface TypertRemoteNamespace$637572736f725461736b73 {
-    cancel: (id: string, attemptId: string) => Promise<RemoteResult<TaskState>>
-    create: (input: CreateTaskInput) => Promise<RemoteResult<TaskState>>
-    listModels: () => Promise<RemoteResult<TaskModel[]>>
-    listTasks: () => Promise<RemoteResult<TaskSummary[]>>
-    resume: (id: string) => Promise<RemoteResult<TaskState>>
-    send: (id: string, text: string) => Promise<RemoteResult<TaskState>>
-    snapshot: (id: string) => Promise<RemoteResult<TaskState>>
-    watch: (id: string, signal?: AbortSignal) => RemoteStreamHandle<TaskState, never>
-  }
   interface TypertRemoteMap {
     'cursorAccount/cancelLogin': (attemptId: string) => Promise<RemoteResult<AccountState>>
     'cursorAccount/getState': () => Promise<RemoteResult<AccountState>>
@@ -34,18 +23,9 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'cursorAccount/refresh': () => Promise<RemoteResult<AccountState>>
     'cursorAccount/startLogin': () => Promise<RemoteResult<AccountState>>
     'cursorAccount/watch': (signal?: AbortSignal) => RemoteStreamHandle<AccountState, never>
-    'cursorTasks/cancel': (id: string, attemptId: string) => Promise<RemoteResult<TaskState>>
-    'cursorTasks/create': (input: CreateTaskInput) => Promise<RemoteResult<TaskState>>
-    'cursorTasks/listModels': () => Promise<RemoteResult<TaskModel[]>>
-    'cursorTasks/listTasks': () => Promise<RemoteResult<TaskSummary[]>>
-    'cursorTasks/resume': (id: string) => Promise<RemoteResult<TaskState>>
-    'cursorTasks/send': (id: string, text: string) => Promise<RemoteResult<TaskState>>
-    'cursorTasks/snapshot': (id: string) => Promise<RemoteResult<TaskState>>
-    'cursorTasks/watch': (id: string, signal?: AbortSignal) => RemoteStreamHandle<TaskState, never>
   }
   interface TypertRemoteNamespaceMap {
     'cursorAccount': TypertRemoteNamespace$637572736f724163636f756e74
-    'cursorTasks': TypertRemoteNamespace$637572736f725461736b73
   }
 }
 
@@ -56,13 +36,5 @@ export declare const TYPERT_REMOTE: TypertRemoteInfo<{
   readonly 'cursorAccount/refresh': TypertRemoteMethod<{  }, AccountState>
   readonly 'cursorAccount/startLogin': TypertRemoteMethod<{  }, AccountState>
   readonly 'cursorAccount/watch': TypertRemoteMethod<{  }, AccountState, 'stream'>
-  readonly 'cursorTasks/cancel': TypertRemoteMethod<{ readonly 'id': string; readonly 'attemptId': string }, TaskState>
-  readonly 'cursorTasks/create': TypertRemoteMethod<{ readonly 'input': CreateTaskInput }, TaskState>
-  readonly 'cursorTasks/listModels': TypertRemoteMethod<{  }, TaskModel[]>
-  readonly 'cursorTasks/listTasks': TypertRemoteMethod<{  }, TaskSummary[]>
-  readonly 'cursorTasks/resume': TypertRemoteMethod<{ readonly 'id': string }, TaskState>
-  readonly 'cursorTasks/send': TypertRemoteMethod<{ readonly 'id': string; readonly 'text': string }, TaskState>
-  readonly 'cursorTasks/snapshot': TypertRemoteMethod<{ readonly 'id': string }, TaskState>
-  readonly 'cursorTasks/watch': TypertRemoteMethod<{ readonly 'id': string }, TaskState, 'stream'>
 }>
 export default TYPERT_REMOTE

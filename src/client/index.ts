@@ -3,13 +3,9 @@ import type {} from "@deepseek-ai/dsh-client-ui-settings-models/client";
 import type {} from "@deepseek-ai/dsh-client-ui-settings/client";
 import type {} from "@deepseek-ai/dsh-client-ui-renderer/client";
 import type {} from "@deepseek-ai/dsh-client-connection/client";
-import type {} from "@deepseek-ai/dsh-client-ui-sidebar/client";
-import type { MainPanelId } from "@deepseek-ai/dsh-client-ui-layout/client";
 import contribution from "../remote.js";
 import { CursorAccountCard } from "./CursorAccountCard.js";
 import { CursorAccountStore } from "./store.js";
-import { CursorTasksPage, CursorTasksIcon } from "./CursorTasksPage.js";
-import { CursorTasksStore } from "./tasks-store.js";
 
 export const inject = ["slots", "remote"];
 
@@ -52,37 +48,4 @@ function applyAccount(ctx: Context): void {
       CursorAccountCard,
     ),
   );
-  ctx.plugin({
-    inject: ["slots", "remote", "remote.cursorTasks"],
-    apply(taskCtx: Context) {
-      const tasks = new CursorTasksStore(taskCtx.remote.cursorTasks);
-      taskCtx.on("connection/reset", tasks.reset);
-      taskCtx.effect(
-        () => () => tasks.dispose(),
-        "cursor-tasks: 页面状态生命周期",
-      );
-      const panel = "cursor-tasks" as MainPanelId;
-      taskCtx.slots.inject("main", () =>
-        taskCtx.slots.register(
-          {
-            name: "main",
-            key: panel,
-            inject: () => ({ controller: tasks, account: controller }),
-          },
-          CursorTasksPage,
-        ),
-      );
-      taskCtx.slots.inject("sidebar.panellist", () =>
-        taskCtx.slots.register(
-          {
-            name: "sidebar.panellist",
-            id: panel,
-            order: 20,
-            label: "Cursor 任务",
-          },
-          CursorTasksIcon,
-        ),
-      );
-    },
-  });
 }

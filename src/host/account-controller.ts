@@ -4,7 +4,95 @@ import {
   type SdkCredentialStore,
 } from "@cursor/sdk";
 import { randomUUID } from "node:crypto";
-import type { AccountState } from "../shared/account.js";
+import type { AccountModel, AccountState } from "../shared/account.js";
+
+function record(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/** SDK 目录也作为不可信边界处理，逐字段校验并复制，绝不保留额外属性。 */
+function safeModels(input: unknown): AccountModel[] {
+  if (!Array.isArray(input)) return [];
+  return input.flatMap((model: unknown): AccountModel[] => {
+    if (
+      !record(model) ||
+      typeof model.id !== "string" ||
+      typeof model.displayName !== "string"
+    )
+      return [];
+    const result: AccountModel = {
+      id: model.id,
+      displayName: model.displayName,
+    };
+    if (Array.isArray(model.parameters)) {
+      result.parameters = model.parameters.flatMap((parameter: unknown) => {
+        if (
+          !record(parameter) ||
+          typeof parameter.id !== "string" ||
+          !Array.isArray(parameter.values)
+        )
+          return [];
+        return [
+          {
+            id: parameter.id,
+            ...(typeof parameter.displayName === "string"
+              ? { displayName: parameter.displayName }
+              : {}),
+            values: parameter.values.flatMap((value: unknown) =>
+              !record(value) || typeof value.value !== "string"
+                ? []
+                : [
+                    {
+                      value: value.value,
+                      ...(typeof value.displayName === "string"
+                        ? { displayName: value.displayName }
+                        : {}),
+                    },
+                  ],
+            ),
+          },
+        ];
+      });
+    }
+    if (Array.isArray(model.variants)) {
+      result.variants = model.variants.flatMap((variant: unknown) => {
+        if (
+          !record(variant) ||
+          typeof variant.displayName !== "string" ||
+          !Array.isArray(variant.params)
+        )
+          return [];
+        const params: { id: string; value: string }[] = [];
+        for (const parameter of variant.params) {
+          // 不丢弃坏参数后保留变体，避免将变体悄悄变成另一种模型配置。
+          if (
+            !record(parameter) ||
+            typeof parameter.id !== "string" ||
+            typeof parameter.value !== "string"
+          )
+            return [];
+          params.push({ id: parameter.id, value: parameter.value });
+        }
+        return [
+          {
+            params,
+            displayName: variant.displayName,
+            ...(typeof variant.description === "string"
+              ? { description: variant.description }
+              : {}),
+            ...(typeof variant.isDefault === "boolean"
+              ? { isDefault: variant.isDefault }
+              : {}),
+            ...(typeof variant.isMaxMode === "boolean"
+              ? { isMaxMode: variant.isMaxMode }
+              : {}),
+          },
+        ];
+      });
+    }
+    return [result];
+  });
+}
 
 export interface AccountControllerOptions {
   /** 仅用于离线 SDK 替身；生产 Cursor 的远端接口只读取官方默认凭据。 */
@@ -134,26 +222,7 @@ export function createAccountController(
             local.apiKeyExpiresAtMs !== undefined
               ? { apiKeyExpiresAtMs: local.apiKeyExpiresAtMs }
               : {}),
-            models: models.map((model) => ({
-              id: model.id,
-              displayName: model.displayName,
-              ...(model.parameters === undefined
-                ? {}
-                : {
-                    parameters: model.parameters.map((p) => ({
-                      id: p.id,
-                      ...(p.displayName === undefined
-                        ? {}
-                        : { displayName: p.displayName }),
-                      values: p.values.map((v) => ({
-                        value: v.value,
-                        ...(v.displayName === undefined
-                          ? {}
-                          : { displayName: v.displayName }),
-                      })),
-                    })),
-                  }),
-            })),
+            models: safeModels(models),
           };
         })(),
         new Promise<never>((_, reject) => {

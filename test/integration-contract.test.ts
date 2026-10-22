@@ -69,16 +69,11 @@ test("真实 Harness patch 仅添加Cursor入口，保留官方配置及默认�
 test("真实生成Host与Client契约一致且watch直接转交流handle", () => {
   const metadata = TYPERT as { invocations: InvocationDescriptor[] };
   assert.ok(Array.isArray(metadata.invocations));
-  assert.equal(metadata.invocations.length, 14);
+  assert.equal(metadata.invocations.length, 6);
   assert.equal(
     metadata.invocations.filter((value) => value.namespace === "cursorAccount")
       .length,
     6,
-  );
-  assert.equal(
-    metadata.invocations.filter((value) => value.namespace === "cursorTasks")
-      .length,
-    8,
   );
   for (const host of metadata.invocations) {
     const client =
@@ -86,7 +81,7 @@ test("真实生成Host与Client契约一致且watch直接转交流handle", () =>
         `${host.namespace}/${host.method}` as keyof typeof TYPERT_REMOTE.methods
       ];
     assert.ok(client);
-    assert.ok(["cursorAccount", "cursorTasks"].includes(host.namespace));
+    assert.equal(host.namespace, "cursorAccount");
     assert.equal(host.id, client.id);
     assert.equal(host.result.mode, "strict");
     if (host.result.mode === "strict")
@@ -147,6 +142,6 @@ test("已构建客户端按Harness lazy factory注册，加载前不执行依赖
   assert.equal(registration?.id, "dsh-cursor-agent");
   assert.equal(typeof registration?.factory, "function");
   assert.match(source, /settings\.section/);
-  assert.match(source, /cursorTasks/);
+  assert.doesNotMatch(source, /cursorTasks|sidebar\.panellist/);
   assert.doesNotMatch(source, /secret-key|apiKey\s*:/);
 });

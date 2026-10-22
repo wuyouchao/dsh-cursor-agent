@@ -1,5 +1,82 @@
 import { FileCredentialStore, Cursor, } from "@cursor/sdk";
 import { randomUUID } from "node:crypto";
+function record(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+/** SDK 目录也作为不可信边界处理，逐字段校验并复制，绝不保留额外属性。 */
+function safeModels(input) {
+    if (!Array.isArray(input))
+        return [];
+    return input.flatMap((model) => {
+        if (!record(model) ||
+            typeof model.id !== "string" ||
+            typeof model.displayName !== "string")
+            return [];
+        const result = {
+            id: model.id,
+            displayName: model.displayName,
+        };
+        if (Array.isArray(model.parameters)) {
+            result.parameters = model.parameters.flatMap((parameter) => {
+                if (!record(parameter) ||
+                    typeof parameter.id !== "string" ||
+                    !Array.isArray(parameter.values))
+                    return [];
+                return [
+                    {
+                        id: parameter.id,
+                        ...(typeof parameter.displayName === "string"
+                            ? { displayName: parameter.displayName }
+                            : {}),
+                        values: parameter.values.flatMap((value) => !record(value) || typeof value.value !== "string"
+                            ? []
+                            : [
+                                {
+                                    value: value.value,
+                                    ...(typeof value.displayName === "string"
+                                        ? { displayName: value.displayName }
+                                        : {}),
+                                },
+                            ]),
+                    },
+                ];
+            });
+        }
+        if (Array.isArray(model.variants)) {
+            result.variants = model.variants.flatMap((variant) => {
+                if (!record(variant) ||
+                    typeof variant.displayName !== "string" ||
+                    !Array.isArray(variant.params))
+                    return [];
+                const params = [];
+                for (const parameter of variant.params) {
+                    // 不丢弃坏参数后保留变体，避免将变体悄悄变成另一种模型配置。
+                    if (!record(parameter) ||
+                        typeof parameter.id !== "string" ||
+                        typeof parameter.value !== "string")
+                        return [];
+                    params.push({ id: parameter.id, value: parameter.value });
+                }
+                return [
+                    {
+                        params,
+                        displayName: variant.displayName,
+                        ...(typeof variant.description === "string"
+                            ? { description: variant.description }
+                            : {}),
+                        ...(typeof variant.isDefault === "boolean"
+                            ? { isDefault: variant.isDefault }
+                            : {}),
+                        ...(typeof variant.isMaxMode === "boolean"
+                            ? { isMaxMode: variant.isMaxMode }
+                            : {}),
+                    },
+                ];
+            });
+        }
+        return [result];
+    });
+}
 export function createAccountController(api, options = {}) {
     if (api === Cursor && (options.store || options.hasEnvironmentKey)) {
         throw new Error("真实 Cursor SDK 不支持覆盖认证存储或凭据来源检测。");
@@ -110,26 +187,7 @@ export function createAccountController(api, options = {}) {
                             local.apiKeyExpiresAtMs !== undefined
                             ? { apiKeyExpiresAtMs: local.apiKeyExpiresAtMs }
                             : {}),
-                        models: models.map((model) => ({
-                            id: model.id,
-                            displayName: model.displayName,
-                            ...(model.parameters === undefined
-                                ? {}
-                                : {
-                                    parameters: model.parameters.map((p) => ({
-                                        id: p.id,
-                                        ...(p.displayName === undefined
-                                            ? {}
-                                            : { displayName: p.displayName }),
-                                        values: p.values.map((v) => ({
-                                            value: v.value,
-                                            ...(v.displayName === undefined
-                                                ? {}
-                                                : { displayName: v.displayName }),
-                                        })),
-                                    })),
-                                }),
-                        })),
+                        models: safeModels(models),
                     };
                 })(),
                 new Promise((_, reject) => {

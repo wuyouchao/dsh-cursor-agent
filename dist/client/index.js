@@ -1,8 +1,6 @@
 import contribution from "../remote.js";
 import { CursorAccountCard } from "./CursorAccountCard.js";
 import { CursorAccountStore } from "./store.js";
-import { CursorTasksPage, CursorTasksIcon } from "./CursorTasksPage.js";
-import { CursorTasksStore } from "./tasks-store.js";
 export const inject = ["slots", "remote"];
 export async function apply(ctx) {
     await ctx.remote.$mount(contribution);
@@ -29,25 +27,5 @@ function applyAccount(ctx) {
         order: 100,
         inject: () => ({ controller }),
     }, CursorAccountCard));
-    ctx.plugin({
-        inject: ["slots", "remote", "remote.cursorTasks"],
-        apply(taskCtx) {
-            const tasks = new CursorTasksStore(taskCtx.remote.cursorTasks);
-            taskCtx.on("connection/reset", tasks.reset);
-            taskCtx.effect(() => () => tasks.dispose(), "cursor-tasks: 页面状态生命周期");
-            const panel = "cursor-tasks";
-            taskCtx.slots.inject("main", () => taskCtx.slots.register({
-                name: "main",
-                key: panel,
-                inject: () => ({ controller: tasks, account: controller }),
-            }, CursorTasksPage));
-            taskCtx.slots.inject("sidebar.panellist", () => taskCtx.slots.register({
-                name: "sidebar.panellist",
-                id: panel,
-                order: 20,
-                label: "Cursor 任务",
-            }, CursorTasksIcon));
-        },
-    });
 }
 //# sourceMappingURL=index.js.map

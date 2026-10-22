@@ -424,3 +424,101 @@ test("真实SDK禁止测试凭据存储覆盖，防止本地状态和远端账�
     /不支持覆盖认证存储/,
   );
 });
+
+test("账号目录缓存保留完整变体与maxMode，并递归过滤未知属性和错误类型", async () => {
+  const f = fixture(true);
+  let reads = 0;
+  const raw = [
+    {
+      id: "model",
+      displayName: "模型",
+      apiKey: "secret-key",
+      parameters: [
+        {
+          id: "effort",
+          displayName: "思考强度",
+          rawError: "secret-error",
+          values: [{ value: "high", displayName: "高", apiKey: "secret-key" }],
+        },
+      ],
+      variants: [
+        {
+          params: [{ id: "effort", value: "high", apiKey: "secret-key" }],
+          displayName: "高强度",
+          description: "变体说明",
+          isDefault: true,
+          isMaxMode: true,
+          rawError: "secret-error",
+        },
+        {
+          params: [],
+          displayName: "普通",
+          isDefault: false,
+          isMaxMode: false,
+          description: { apiKey: "secret-key" },
+        },
+        { params: [{ id: "effort", value: 42 }], displayName: "错误参数" },
+        {
+          params: [],
+          displayName: "错误可选字段",
+          isDefault: "secret-key",
+          isMaxMode: { apiKey: "secret-key" },
+        },
+        { params: "secret-key", displayName: "错误数组" },
+        { params: [], displayName: { apiKey: "secret-key" } },
+      ],
+    },
+    { id: "invalid", displayName: { apiKey: "secret-key" } },
+  ];
+  f.api.models.list = async () => {
+    reads++;
+    return raw as unknown as Awaited<ReturnType<typeof f.api.models.list>>;
+  };
+  try {
+    assert.deepEqual(f.controller.getState().models, []);
+    assert.equal(reads, 0);
+    await f.controller.refresh();
+    const models = f.controller.getState().models;
+    assert.deepEqual(models, [
+      {
+        id: "model",
+        displayName: "模型",
+        parameters: [
+          {
+            id: "effort",
+            displayName: "思考强度",
+            values: [{ value: "high", displayName: "高" }],
+          },
+        ],
+        variants: [
+          {
+            params: [{ id: "effort", value: "high" }],
+            displayName: "高强度",
+            description: "变体说明",
+            isDefault: true,
+            isMaxMode: true,
+          },
+          {
+            params: [],
+            displayName: "普通",
+            isDefault: false,
+            isMaxMode: false,
+          },
+          { params: [], displayName: "错误可选字段" },
+        ],
+      },
+    ]);
+    assert.doesNotMatch(
+      JSON.stringify(models),
+      /secret-key|secret-error|rawError|apiKey/,
+    );
+    models[0]!.variants![0]!.params[0]!.value = "changed";
+    assert.equal(
+      f.controller.getState().models[0]!.variants![0]!.params[0]!.value,
+      "high",
+    );
+    assert.equal(reads, 1, "反复读取缓存不得请求远端目录");
+  } finally {
+    await f.controller.dispose();
+  }
+});

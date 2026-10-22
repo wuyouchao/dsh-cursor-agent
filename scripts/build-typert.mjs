@@ -16,9 +16,12 @@ const pkg = resolve(root, "packages/cursor-agent");
 await mkdir(pkg, { recursive: true });
 await cp("src/host", resolve(pkg, "src/host"), { recursive: true });
 await cp("src/shared", resolve(pkg, "src/shared"), { recursive: true });
+// 宿主可信cwd解析只依赖这一安全错误类型，不把模型运行实现纳入RPC分析。
+await mkdir(resolve(pkg, "src/adapter"), { recursive: true });
+await cp("src/adapter/errors.ts", resolve(pkg, "src/adapter/errors.ts"));
 await writeFile(
   resolve(pkg, "src/index.ts"),
-  'export { CursorAccountService } from "./host/remote-service.js";\nexport { CursorTaskService } from "./host/task-service.js";\nexport type { AccountState, AccountModel } from "./shared/account.js";\nexport type { TaskModel, TaskMessage, TaskSummary, TaskState, CreateTaskInput } from "./shared/tasks.js";\n',
+  'export { CursorAccountService } from "./host/remote-service.js";\nexport type { AccountState, AccountModel } from "./shared/account.js";\n',
 );
 const original = JSON.parse(await readFile("package.json", "utf8"));
 await writeFile(
@@ -30,10 +33,6 @@ await writeFile(
       "./shared/account": {
         types: "./lib/types/shared/account.d.ts",
         default: "./lib/shared/account.js",
-      },
-      "./shared/tasks": {
-        types: "./lib/types/shared/tasks.d.ts",
-        default: "./lib/shared/tasks.js",
       },
     },
   }),
