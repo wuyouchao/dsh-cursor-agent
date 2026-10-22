@@ -59,7 +59,8 @@
     "logout": "node dist/cli.js logout"
   },
   "dependencies": {
-    "@cursor/sdk": "1.0.40"
+    "@cursor/sdk": "1.0.40",
+    "zod": "4.6.7"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.0.5"
