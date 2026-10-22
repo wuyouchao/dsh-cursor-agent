@@ -1,14 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { Context } from "@deepseek-ai/cordis";
 import { CursorTaskService } from "../src/host/task-service.js";
 import type { StandaloneRuntime, TaskState } from "../src/shared/tasks.js";
+
+const workspace = resolve(tmpdir(), "cursor-task-service-workspace");
 
 async function fixture() {
   const calls: string[] = [];
   const state = {
     id: "task",
-    cwd: "I:\\workspace",
+    cwd: workspace,
     revision: 1,
     model: "route",
     status: "idle" as const,
@@ -77,7 +81,7 @@ test("独立任务服务不隐式创建或发送；所有返回显式安全投�
     const models = await f.service.listModels();
     const tasks = await f.service.listTasks();
     const created = await f.service.create({
-      cwd: "I:\\workspace",
+      cwd: workspace,
       model: "route",
     });
     assert.deepEqual(f.calls, ["models", "list", "create"]);

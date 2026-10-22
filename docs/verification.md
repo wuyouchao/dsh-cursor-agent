@@ -140,4 +140,6 @@ runProfilePnpm(context, ["add", "github:wuyouchao/dsh-cursor-agent#v0.1.1", "--s
 
 随后通过真实 `PluginPackages` 与 `createRuntimeResolution` 导入并激活升级后的完整安装入口，达到 ACTIVE，`cursorAccount`、`cursorTasks` 就绪，插件与安装域 scope/agent 函数严格同一实例；已有 adapter 和 factory 的身份保持不变，插件卸载只移除自身服务。脚本为 `.local/pack-check/verify-v020-resolver.mjs`，日志为 fixture 的 `full-resolver-output.txt`。安装域使用仓库中精确版本的官方 Host 包，未启动 Desktop ASAR 全应用。纯 profile 的 pnpm 缺 Host peer 警告符合关闭自动安装 peer 的预期，实际依赖由 Harness 的解析器提供，不能用裸 Node 导入或 `pnpm peers check` 替代此项验证。
 
+同一隔离 fixture 进一步使用官方 `runProfilePnpm` 安装固定 Git 提交 `2acac0b96178c3b471fa0d82e93f963860fdcacc`，退出码 0，版本为 0.2.0，锁文件解析到该 SHA，没有 prepare 审批阻断；安全安装策略、bundle 与无关配置保留。Git 安装后的完整入口再次经官方解析器激活，账号及任务就绪，已有 adapter/factory 保持不变。独立日志为 `git-install-output.txt` 与 `git-full-resolver-output.txt`，未覆盖此前 tgz 验证日志。该代码提交之后仅修正跨平台测试路径并补充文档，生产源码及编译产物不变。
+
 本次未修改用户真实 profile，未执行浏览器授权、真实账号目录请求、付费对话或 SDK Windows 沙箱实测。新建未发送的任务没有有效 checkpoint 时，重启后显示“不可继续”；恢复检查不会创建空 Agent 冒充成功。
