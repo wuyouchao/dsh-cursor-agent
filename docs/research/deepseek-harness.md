@@ -31,7 +31,7 @@ export function apply(ctx: Context): void {
       name: dsh-cursor-agent
 ```
 
-本地预编译 tgz 可用 `dsh plugin --profile web add ./dsh-cursor-agent-0.0.1.tgz` 安装到已有 Web profile。新 profile 的默认 base 与 Web 应用不同。GitHub 源码安装另需构建脚本和包管理器构建许可，初始化先采用 tgz 验证。
+本地预编译 tgz 可用 `dsh plugin --profile web add ./dsh-cursor-agent-0.0.2.tgz` 安装到已有 Web profile。新 profile 的默认 base 与 Web 应用不同。仅提供 TypeScript 源码的 Git 安装需要构建脚本及相应许可；本项目从 `0.0.2` 起把预编译入口随 Git 提交，移除 `prepare`，避免安装阶段触发构建许可。Desktop 应使用自己的 `desktop` profile。
 
 来源：[生命周期](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/docs/user/develop/framework/index.md)、[打包发布](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/docs/user/develop/basic/publish.md)。
 

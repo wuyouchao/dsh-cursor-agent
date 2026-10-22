@@ -1,6 +1,6 @@
 {
   "name": "dsh-cursor-agent",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "面向 DeepSeek Harness 的 Cursor 原生 Agent 集成插件（初始化阶段）",
   "type": "module",
@@ -56,8 +56,7 @@
     "check": "npm run typecheck && npm run format:check && npm test && npm run build",
     "login": "node dist/cli.js login",
     "auth:status": "node dist/cli.js status",
-    "logout": "node dist/cli.js logout",
-    "prepare": "npm run build"
+    "logout": "node dist/cli.js logout"
   },
   "dependencies": {
     "@cursor/sdk": "1.0.40"

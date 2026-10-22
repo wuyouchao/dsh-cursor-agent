@@ -5,6 +5,8 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "inlineSources": true,
+    "newLine": "lf",
     "rootDir": "src",
     "outDir": "dist"
   },

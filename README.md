@@ -30,34 +30,45 @@ npm run check
 
 ## 从 GitHub 安装
 
-需要 Node.js 24、Git、可用的 pnpm，以及已有的 Harness `0.2.1-rc.2` Web profile。**无需安装 Cursor 桌面版，也无需手动安装 Cursor SDK**；包管理器会自动安装 `@cursor/sdk` 依赖。
+兼容目标为 Harness `0.2.1-rc.2`。**无需安装 Cursor 桌面版，也无需手动安装 Cursor SDK**；包管理器会自动安装 `@cursor/sdk` 依赖。
+
+Desktop 用户在“添加插件”窗口填入：
+
+```text
+github:wuyouchao/dsh-cursor-agent#main
+```
+
+点击安装，完成后启用插件。Desktop 使用独立的 `desktop` profile。
+
+使用命令行管理 Desktop 插件时，先完全退出 Desktop，再运行其自带的 `dsh`：
+
+```sh
+dsh plugin --profile desktop add github:wuyouchao/dsh-cursor-agent#main
+```
+
+命令完成后重新打开 Desktop。Web 用户则需要 Node.js 24、Git、可用的 pnpm 和已有的 Web profile，执行：
 
 ```sh
 dsh plugin --profile web add github:wuyouchao/dsh-cursor-agent#main
 ```
 
-仓库中的 `prepare` 脚本会在 Git 安装时编译入口。若 pnpm 提示不允许构建，在该 profile 的 `pnpm-workspace.yaml` 中合并以下配置，然后重试安装。默认位置为 `~/.dsh/profiles/web/pnpm-workspace.yaml`，设置了 `DSH_HOME` 时以实际目录为准。保留文件原有内容；若 pnpm 输出的包标识不同，以其提示为准。
-
-```yaml
-allowBuilds:
-  dsh-cursor-agent: true
-```
+从 `0.0.2` 起，仓库直接包含预编译的 `dist/`，不再在安装时执行 `prepare`，无需为本插件添加构建白名单。如果安装详情仍显示旧提交 `9b8aac4` 或 `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`，返回添加界面重新输入最新 Git 地址，或将 `#main` 换成修复后的提交 SHA；失败页面的“重试”可能继续使用旧的安装任务。
 
 可把 `#main` 换成具体提交 SHA，固定安装的代码版本。安装后重启对应 Harness 实例。**本版本仅验证基础插件加载，尚未提供 Cursor 对话、模型选择器和界面登录按钮。**
 
-安装到 profile 后，可通过以下命令使用认证工具：
+安装到 Desktop profile 后，完全退出 Desktop，再通过以下命令使用认证工具。Web 用户把 `desktop` 替换为 `web`。
 
 ```sh
-dsh plugin --profile web exec dsh-cursor-agent-auth login
-dsh plugin --profile web exec dsh-cursor-agent-auth status
-dsh plugin --profile web exec dsh-cursor-agent-auth logout
+dsh plugin --profile desktop exec dsh-cursor-agent-auth login
+dsh plugin --profile desktop exec dsh-cursor-agent-auth status
+dsh plugin --profile desktop exec dsh-cursor-agent-auth logout
 ```
 
 安装机制参见[官方 GitHub 安装说明](https://github.com/deepseek-ai/deepseek-harness/blob/687f282e8625c6b8d11ff58211a90524be2e4317/docs/user/develop/basic/publish.md#installing-from-github-the-build-script-catch)。
 
 ## Cursor 登录
 
-在源码目录完成 `npm ci` 后，也可以运行以下命令。若本机全局禁用了安装脚本，先手动执行 `npm run build` 生成入口。
+在源码目录完成 `npm ci` 后，也可以运行以下命令。修改源码后先执行 `npm run build` 更新已提交的编译产物。
 
 ```sh
 npm run login
@@ -77,13 +88,14 @@ npm run logout
 ## 本地打包
 
 ```sh
+npm run build
 npm pack
 ```
 
 生成的 `.tgz` 包含编译产物和 `cordis.patch.yml`。如需在已有、可用的 Harness `web` profile 验证加载，可执行：
 
 ```sh
-dsh plugin --profile web add ./dsh-cursor-agent-0.0.1.tgz
+dsh plugin --profile web add ./dsh-cursor-agent-0.0.2.tgz
 ```
 
 这会修改该 profile。重启相应 Harness 实例后，入口只记录“桥接尚未启用”。初次创建 profile 不会自动得到 Web UI，需遵循官方 profile 初始化流程。当前没有发布 npm 包，`private: true` 用于阻止误发布。

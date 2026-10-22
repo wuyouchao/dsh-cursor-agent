@@ -21,4 +21,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - name: 检查已提交的编译产物
+        shell: bash
+        run: |
+          git diff --exit-code -- dist
+          test -z "$(git ls-files --others --exclude-standard -- dist)"
       - run: npm pack --dry-run
